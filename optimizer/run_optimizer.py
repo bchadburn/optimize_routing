@@ -120,4 +120,4 @@ if __name__ == "__main__":
     ]
 
     optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
-             num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period, )
+             num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period)

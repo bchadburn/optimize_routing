@@ -27,33 +27,61 @@ def distribution_site_open_duration_rolling_constraint(model, time_period, distr
 def distribution_supply_equal_capacity(model, time_period, manufacturing_site):
     # Supply constraints so total mfg site supply is not more than capacity at a given distribution site  
     total_supply_m = sum([model.v_transport_m_to_d[d, time_period, manufacturing_site] for d in model.s_distribution_sites()])
-    return total_supply_m <= model.p_manufacturing_site_capacity[manufacturing_site]
+    slack_var = sum([model.v_transport_m_to_d_capacity_slack[d, time_period, manufacturing_site] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+    return total_supply_m <= model.p_manufacturing_site_capacity[manufacturing_site] + slack_var
  
 def distribution_shipments_equal_customer_demand(model, time_period, customer):
     # Demand constraints so total shipments is equal to customer demand
-    return sum([model.v_transport_d_to_c[d, time_period, customer] for d in model.s_distribution_sites()]) == model.p_customer_demand[time_period, customer]
-            
-def minimize_cost_objective(model):
-    total_cost = sum([model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
-                                for day in model.s_time_indices()
-                                for d in model.s_distribution_sites()
-                                ]) + \
-                    sum([model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m]
-                                for d in model.s_distribution_sites()
-                                for day in model.s_time_indices()
-                                for m in model.s_manufacturing_sites()]) + \
-                    sum([model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c[d, day, c]
-                                for d in model.s_distribution_sites()
-                                for day in model.s_time_indices()
-                                for c in model.s_customers()])
-    return total_cost
-    
+    added_shipments_slack_var = sum([model.v_transport_d_to_c_shipments_equal_demand_slack[d, time_period, customer] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+    added_customer_demand_slack_var = sum([model.v_transport_d_to_c_demand_slack[d, time_period, customer] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+    return sum([model.v_transport_d_to_c[d, time_period, customer] for d in model.s_distribution_sites()]) + added_shipments_slack_var == model.p_customer_demand[time_period, customer] + added_customer_demand_slack_var
+
 def distribution_shipments_equal_total_received_shipments(model, time_period, distribution_site):
     # Limit distribution center shipments to the total of received shipments
-    total_shipment_from_m_to_d = sum([model.v_transport_m_to_d[distribution_site, time_period, manufacturing_site] for manufacturing_site in model.s_manufacturing_sites()])
+    total_shipment_from_m_to_d = sum([model.v_transport_m_to_d[distribution_site, time_period, m] for m in model.s_manufacturing_sites()])
     total_shipment_from_d_to_c = sum([model.v_transport_d_to_c[distribution_site, time_period, customer] for customer in model.s_customers()])
-    return total_shipment_from_m_to_d == total_shipment_from_d_to_c
+    
+    shipments_m_to_d_slack_var = sum([model.v_transport_m_to_d_shipments_slack[distribution_site, time_period, m] for m in model.s_manufacturing_sites() if model.model_config.get("solve_infeasibility", False)])
+    shipments_d_to_c_slack_var = sum([model.v_transport_d_to_c_shipments_slack[distribution_site, time_period, c] for c in model.s_customers() if model.model_config.get("solve_infeasibility", False)])
 
+    return total_shipment_from_m_to_d + shipments_m_to_d_slack_var == total_shipment_from_d_to_c + shipments_d_to_c_slack_var
+     
+def minimize_cost_objective(model):
+    if not model.model_config.get("solve_infeasibility", False):
+        total_cost = sum([model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
+                                    for day in model.s_time_indices()
+                                    for d in model.s_distribution_sites()
+                                    ]) + \
+                        sum([model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for m in model.s_manufacturing_sites()]) + \
+                        sum([model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c[d, day, c]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for c in model.s_customers()])
+    else:
+        total_cost = sum([100*model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d_shipments_slack[d, day, m]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for m in model.s_manufacturing_sites()]) + \
+                     sum([100*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_shipments_slack[d, day, c]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for c in model.s_customers()]) + \
+                     sum([200*model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d_capacity_slack[d, day, m]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for m in model.s_manufacturing_sites()]) + \
+                     sum([500*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_shipments_equal_demand_slack[d, day, c]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for c in model.s_customers()]) + \
+                     sum([500*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_demand_slack[d, day, c]
+                                    for d in model.s_distribution_sites()
+                                    for day in model.s_time_indices()
+                                    for c in model.s_customers()]) 
+    return total_cost
 
 # Piecewise examples
 

@@ -7,7 +7,6 @@ from optimizer.construct_data_objects import (SimulationParameters,
                                               SupplyChainData)
 from optimizer.math_model_constraints import minimize_cost_objective
 from optimizer.math_model_declaration import create_math_model
-from ortools_objects.cost_objects import PowerUse
 from ortools_objects.model import ORToolsCPModel
 
 
@@ -33,7 +32,7 @@ def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
 
 def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_demand: list, std_dev_demand: list, 
              transport_cost_m_to_d: list, transport_cost_d_to_c: list,num_days: int=10, num_simulations: int=10, 
-             decision_rolling_period: int=3) -> List[Union[None, list, float]]:
+             decision_rolling_period: int=3, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
     
     logger = log.get_logger("SCIP Solver")
     
@@ -76,6 +75,7 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
         rel_gap=0.00,
         solver_log=True,
         shallow_substitute=True,
+        solve_infeasibility=solve_infeasibility
     )
 
     create_math_model(
@@ -99,7 +99,8 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
         opening_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
         total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
         
-        assert round(total_cost,2) == round(minimize_cost_objective(or_math_model),2), "Objective function result doesn't match total costs"
+        if not or_math_model.model_config.get("solve_infeasibility", False):
+            assert round(total_cost,2) == round(minimize_cost_objective(or_math_model),2), "Objective function result doesn't match total costs"
         
         open_distribution_decisions = [or_math_model.bv_distribution_cost_incurred[day, d]
                                 for day in or_math_model.s_time_indices()
@@ -149,4 +150,4 @@ if __name__ == "__main__":
     ]
 
     opening_distribution_costs, total_transport_cost, open_distribution_decisions = optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
-             num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period)
+             num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period, solve_infeasibility=True)

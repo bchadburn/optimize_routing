@@ -1,5 +1,6 @@
 from numbers import Number
 
+
 class ManufacturingSite:
     """
     Represents a manufacturing site.

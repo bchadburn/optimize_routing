@@ -1,22 +1,15 @@
 import numpy as np
-import optimizer.math_model_constraints as constraint
 
-from ortools_objects.constraint import (
-    IndexedORStandardConst,
-)
+import optimizer.math_model_constraints as constraint
+from optimizer.construct_data_objects import (SimulationParameters,
+                                              SupplyChainData)
+from ortools_objects.constraint import IndexedORStandardConst
 from ortools_objects.model import ORToolsCPModel
 from ortools_objects.objective import ORObjective
-from ortools_objects.param import (
-    IndexedORParam,
-    ScalarORParam,
-)
+from ortools_objects.param import IndexedORParam, ScalarORParam
 from ortools_objects.set import ORSet
-from ortools_objects.var import (
-    IndexedORBoolVariable,
-    IndexedORContinuousVariable,
-)
-
-from optimizer.construct_data_objects import SupplyChainData, SimulationParameters
+from ortools_objects.var import (IndexedORBoolVariable,
+                                 IndexedORContinuousVariable)
 
 
 def _add_base_model_sets(

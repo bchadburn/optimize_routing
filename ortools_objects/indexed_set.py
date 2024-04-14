@@ -1,6 +1,4 @@
-from ortools_objects.indexed_component import (
-    IndexedComponent,
-)
+from ortools_objects.indexed_component import IndexedComponent
 
 
 class IndexedORSet(IndexedComponent):

@@ -1,11 +1,15 @@
-import utils.log as log
 from typing import List, Union
+
 from ortools.linear_solver import pywraplp
+
+import utils.log as log
+from optimizer.construct_data_objects import (SimulationParameters,
+                                              SupplyChainData)
+from optimizer.math_model_constraints import minimize_cost_objective
 from optimizer.math_model_declaration import create_math_model
-from optimizer.construct_data_objects import SupplyChainData, SimulationParameters
 from ortools_objects.cost_objects import PowerUse
 from ortools_objects.model import ORToolsCPModel
-from optimizer.math_model_constraints import minimize_cost_objective
+
 
 def calculate_transport_costs(model: ORToolsCPModel) -> List[float]:
     # Calculate transportation costs

@@ -1,7 +1,3 @@
-from optimizer.or_tools_functions import (
-    convert_expr_to_ortools,
-)
-
 # supply constraints
 def distribution_status_constrained_by_d_to_c_supply(model, distribution_site, time_period, customer):
     return model.v_transport_d_to_c[distribution_site, time_period, customer] <= model.bv_distribution_on[time_period, distribution_site] * model.p_big_m[None]

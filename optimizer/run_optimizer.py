@@ -1,5 +1,5 @@
 import utils.log as log
-from typing import List
+from typing import List, Union
 from ortools.linear_solver import pywraplp
 from optimizer.math_model_declaration import create_math_model
 from optimizer.construct_data_objects import SupplyChainData, SimulationParameters
@@ -27,7 +27,10 @@ def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
                                 ]
     return opening_distribution_cost
 
-def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_demand: list, std_dev_demand: list, transport_cost_m_to_d: list, transport_cost_d_to_c: list,num_days: int=10, num_simulations: int=10, decision_rolling_period: int=3) -> None:
+def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_demand: list, std_dev_demand: list, 
+             transport_cost_m_to_d: list, transport_cost_d_to_c: list,num_days: int=10, num_simulations: int=10, 
+             decision_rolling_period: int=3) -> List[Union[None, list, float]]:
+    
     logger = log.get_logger("SCIP Solver")
     
     num_customers = len(mean_demand)
@@ -82,17 +85,24 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
     status = or_math_model.solve_model()
     if status != pywraplp.Solver.OPTIMAL:
         logger.info("Optimizer didn't find optimal solution")
-        return [None for _ in range(num_distribution_sites) for _ in range(num_days)],float('inf')
+        none_dist_list = [None for _ in range(num_distribution_sites)]
+        return none_dist_list, float('inf'), none_dist_list
     else:
         logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
         logger.info("Optimal solution Found")
         
         total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
         opening_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
-        total_transport_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
+        total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
         
+        assert round(total_cost,2) == round(minimize_cost_objective(or_math_model),2), "Objective function result doesn't match total costs"
+        
+        open_distribution_decisions = [or_math_model.bv_distribution_cost_incurred[day, d]
+                                for day in or_math_model.s_time_indices()
+                                for d in or_math_model.s_distribution_sites()
+                                ]
         # Return objective value, DC opening decision, and total transportation cost
-        return opening_distribution_costs, total_transport_cost    
+        return opening_distribution_costs, total_cost, open_distribution_decisions
 
 
 if __name__ == "__main__":
@@ -134,5 +144,5 @@ if __name__ == "__main__":
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   # Distribution site 5
     ]
 
-    opening_distribution_costs, total_transport_cost = optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
+    opening_distribution_costs, total_transport_cost, open_distribution_decisions = optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
              num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period)

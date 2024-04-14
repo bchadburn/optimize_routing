@@ -84,7 +84,7 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
         logger.info("Optimizer didn't find optimal solution")
         return [None for _ in range(num_distribution_sites) for _ in range(num_days)],float('inf')
     else:
-        print(f"total_cost: {minimize_cost_objective(or_math_model)}")
+        logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
         logger.info("Optimal solution Found")
         
         total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
@@ -134,5 +134,5 @@ if __name__ == "__main__":
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   # Distribution site 5
     ]
 
-    optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
+    opening_distribution_costs, total_transport_cost = optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
              num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period)

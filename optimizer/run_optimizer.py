@@ -20,6 +20,13 @@ def calculate_transport_costs(model: ORToolsCPModel) -> List[float]:
                             for c in model.s_customers()])
     return total_transport_cost_m_to_d, total_transport_cost_d_to_c
     
+def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
+    opening_distribution_cost = [model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
+                                for day in model.s_time_indices()
+                                for d in model.s_distribution_sites()
+                                ]
+    return opening_distribution_cost
+
 def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_demand: list, std_dev_demand: list, transport_cost_m_to_d: list, transport_cost_d_to_c: list,num_days: int=10, num_simulations: int=10, decision_rolling_period: int=3) -> None:
     logger = log.get_logger("SCIP Solver")
     
@@ -75,11 +82,19 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
     status = or_math_model.solve_model()
     if status != pywraplp.Solver.OPTIMAL:
         logger.info("Optimizer didn't find optimal solution")
+        return [None for _ in range(num_distribution_sites) for _ in range(num_days)],float('inf')
     else:
         print(f"total_cost: {minimize_cost_objective(or_math_model)}")
         logger.info("Optimal solution Found")
-        calculate_transport_costs(or_math_model)
-                
+        
+        total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
+        opening_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
+        total_transport_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
+        
+        # Return objective value, DC opening decision, and total transportation cost
+        return opening_distribution_costs, total_transport_cost    
+
+
 if __name__ == "__main__":
     num_days=10
     num_simulations=10 

@@ -3,8 +3,7 @@ from typing import List, Union
 from ortools.linear_solver import pywraplp
 
 import utils.log as log
-from optimizer.construct_data_objects import (SimulationParameters,
-                                              SupplyChainData)
+from optimizer.construct_data_objects import SimulationParameters, SupplyChainData
 from optimizer.math_model_constraints import minimize_cost_objective
 from optimizer.math_model_declaration import create_math_model
 from ortools_objects.model import ORToolsCPModel
@@ -29,20 +28,16 @@ def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
                                 for d in model.s_distribution_sites()
                                 ]
     return opening_distribution_cost
+ 
 
-def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_demand: list, std_dev_demand: list, 
-             transport_cost_m_to_d: list, transport_cost_d_to_c: list,num_days: int=10, num_simulations: int=10, 
-             decision_rolling_period: int=3, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
-    
-    logger = log.get_logger("SCIP Solver")
+def construct_supply_chain_data(mean_demand: list, mfg_site_capacity: list, std_dev_demand: list, distribution_opening_costs: list, transport_cost_m_to_d: list, transport_cost_d_to_c: list) -> SupplyChainData:
+    # Create class to organize supply chain data
     
     num_customers = len(mean_demand)
-    num_distribution_sites = len(distribution_opening_costs)
     num_manufacturing_sites = len(mfg_site_capacity)
+    num_distribution_sites = len(distribution_opening_costs)
     
-    # Create class to organize supply chain data
     supply_chain_data = SupplyChainData()
-    sim_params = SimulationParameters(num_days, num_simulations, decision_rolling_period)
     
     # Adding manufacturing sites. Simply assigning ids based on idx
     mf_ids = [mf_id for mf_id in range(num_manufacturing_sites)]
@@ -68,7 +63,15 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
     for dist_id in range(num_distribution_sites):
         for cust_id in range(num_customers):
             supply_chain_data.distribution_sites[dist_id].set_dist_to_cust_transport_costs(cust_id, transport_cost_d_to_c[dist_id][cust_id])
+    return supply_chain_data
 
+
+def optimize(distribution_opening_costs: list, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
+    """Constructs solver """
+    logger = log.get_logger("SCIP Solver")
+    
+    num_distribution_sites = len(distribution_opening_costs)
+    
     or_math_model = ORToolsCPModel(
         logger=logger,
         max_time=30,
@@ -92,9 +95,13 @@ def optimize(distribution_opening_costs: list, mfg_site_capacity: list, mean_dem
         none_dist_list = [None for _ in range(num_distribution_sites)]
         return none_dist_list, float('inf'), none_dist_list
     else:
-        logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
-        logger.info("Optimal solution Found")
+        if or_math_model.model_config.get("solve_infeasibility", False):
+            print("Solution returned with slack variables active (Solving for infeasibility)")
         
+        else:
+            logger.info("Optimal solution Found")
+        
+        logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
         total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
         opening_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
         total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
@@ -148,6 +155,12 @@ if __name__ == "__main__":
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 4
         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   # Distribution site 5
     ]
-
-    opening_distribution_costs, total_transport_cost, open_distribution_decisions = optimize(distribution_opening_costs, mfg_site_capacity, mean_demand, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c,
-             num_days=num_days, num_simulations=num_simulations, decision_rolling_period=decision_rolling_period, solve_infeasibility=True)
+    
+    # Construct supply chain data, params
+    sim_params = SimulationParameters(num_days, num_simulations, decision_rolling_period)
+    supply_chain_data = construct_supply_chain_data(mean_demand, mfg_site_capacity, std_dev_demand, distribution_opening_costs, transport_cost_m_to_d, transport_cost_d_to_c)
+    
+    # Consruct and run optimizer
+    opening_distribution_costs, total_transport_cost, open_distribution_decisions = optimize(distribution_opening_costs, solve_infeasibility=False)
+    
+    print(opening_distribution_costs, total_transport_cost)

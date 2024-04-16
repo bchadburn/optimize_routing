@@ -1,22 +1,15 @@
 import numpy as np
-import optimizer.math_model_constraints as constraint
 
-from ortools_objects.constraint import (
-    IndexedORStandardConst,
-)
+import optimizer.math_model_constraints as constraint
+from optimizer.construct_data_objects import (SimulationParameters,
+                                              SupplyChainData)
+from ortools_objects.constraint import IndexedORStandardConst
 from ortools_objects.model import ORToolsCPModel
 from ortools_objects.objective import ORObjective
-from ortools_objects.param import (
-    IndexedORParam,
-    ScalarORParam,
-)
+from ortools_objects.param import IndexedORParam, ScalarORParam
 from ortools_objects.set import ORSet
-from ortools_objects.var import (
-    IndexedORBoolVariable,
-    IndexedORContinuousVariable,
-)
-
-from optimizer.construct_data_objects import SupplyChainData, SimulationParameters
+from ortools_objects.var import (IndexedORBoolVariable,
+                                 IndexedORContinuousVariable)
 
 
 def _add_base_model_sets(
@@ -166,6 +159,52 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         doc="Number of shipments from distribution sites to customers",
         log_solution=True,
     )
+
+def _add_slack_variables(model: ORToolsCPModel) -> None:
+    
+    model.v_transport_m_to_d_shipments_slack = IndexedORContinuousVariable(
+        model.s_distribution_sites,
+        model.s_time_indices,
+        model.s_manufacturing_sites,
+        name="ransport_m_to_d_shipments_slack",
+        log_solution=True,
+    )
+    
+    model.v_transport_m_to_d_capacity_slack = IndexedORContinuousVariable(
+        model.s_distribution_sites,
+        model.s_time_indices,
+        model.s_manufacturing_sites,
+        name="transport_m_to_d_capacity_slack",
+        log_solution=True,
+    )
+    
+    model.v_transport_d_to_c_shipments_slack = IndexedORContinuousVariable(
+        model.s_distribution_sites,
+        model.s_time_indices,
+        model.s_customers,
+        name="transport_d_to_c_shipments_slack",
+        log_solution=True,
+    )    
+
+    model.v_transport_d_to_c_shipments_equal_demand_slack = IndexedORContinuousVariable(
+        model.s_distribution_sites,
+        model.s_time_indices,
+        model.s_customers,
+        name="transport_d_to_c_shipments_equal_demand_slack",
+        log_solution=True,
+    )
+    
+    model.v_transport_d_to_c_demand_slack = IndexedORContinuousVariable(
+        model.s_distribution_sites,
+        model.s_time_indices,
+        model.s_customers,
+        name="transport_d_to_c_demand_slack",
+        log_solution=True,
+    )
+    
+
+
+
     
 def _add_base_model_constraints(model: ORToolsCPModel) -> None:
     """Adds model constraints by invoking functions defined in the constraints file. 
@@ -263,4 +302,8 @@ def create_math_model(
     )
     _add_base_model_variables(model)
     _add_base_model_constraints(model)
+    
+    if model.model_config.get("solve_infeasibility", False):
+        _add_slack_variables(model)
+        
     _add_model_objective(model)

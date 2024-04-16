@@ -1,3 +1,4 @@
+
 class ORComponent:
     """Base component object for ORTools optimization program. All other classes, save for the model component, are based on this component.
     By the time this object is initialized (from a subclass), it should only contain a docstring, a component type, and a name.

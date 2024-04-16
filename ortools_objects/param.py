@@ -3,10 +3,7 @@ from numbers import Number
 from typing import Union
 
 from ortools_objects.component import ORComponent
-from ortools_objects.indexed_component import (
-    IndexedComponent,
-)
-from ortools_objects.set import ORSet
+from ortools_objects.indexed_component import IndexedComponent
 
 
 class IndexedORParam(IndexedComponent):

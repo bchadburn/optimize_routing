@@ -4,9 +4,7 @@ from typing import Callable
 from ortools.linear_solver import pywraplp
 
 from ortools_objects.component import ORComponent
-from ortools_objects.indexed_component import (
-    IndexedComponent,
-)
+from ortools_objects.indexed_component import IndexedComponent
 from ortools_objects.model import ORToolsCPModel
 from ortools_objects.set import ORSet
 

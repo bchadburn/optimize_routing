@@ -23,11 +23,11 @@ def calculate_transport_costs(model: ORToolsCPModel) -> List[float]:
     return total_transport_cost_m_to_d, total_transport_cost_d_to_c
     
 def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
-    opening_distribution_cost = [model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
+    total_open_distribution_costs = [model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
                                 for day in model.s_time_indices()
                                 for d in model.s_distribution_sites()
                                 ]
-    return opening_distribution_cost
+    return total_open_distribution_costs
  
 
 def construct_supply_chain_data(mean_demand: list, mfg_site_capacity: list, std_dev_demand: list, distribution_opening_costs: list, transport_cost_m_to_d: list, transport_cost_d_to_c: list) -> SupplyChainData:
@@ -66,11 +66,9 @@ def construct_supply_chain_data(mean_demand: list, mfg_site_capacity: list, std_
     return supply_chain_data
 
 
-def optimize(distribution_opening_costs: list, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
+def optimize(supply_chain_data, sim_params, num_distribution_sites: list, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
     """Constructs solver """
     logger = log.get_logger("SCIP Solver")
-    
-    num_distribution_sites = len(distribution_opening_costs)
     
     or_math_model = ORToolsCPModel(
         logger=logger,
@@ -103,8 +101,8 @@ def optimize(distribution_opening_costs: list, solve_infeasibility: bool=False) 
         
         logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
         total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
-        opening_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
-        total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(opening_distribution_costs)
+        total_open_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
+        total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(total_open_distribution_costs)
         
         if not or_math_model.model_config.get("solve_infeasibility", False):
             assert round(total_cost,2) == round(minimize_cost_objective(or_math_model),2), "Objective function result doesn't match total costs"
@@ -114,7 +112,7 @@ def optimize(distribution_opening_costs: list, solve_infeasibility: bool=False) 
                                 for d in or_math_model.s_distribution_sites()
                                 ]
         # Return objective value, DC opening decision, and total transportation cost
-        return opening_distribution_costs, total_cost, open_distribution_decisions
+        return total_open_distribution_costs, total_cost, open_distribution_decisions
 
 
 if __name__ == "__main__":
@@ -161,6 +159,7 @@ if __name__ == "__main__":
     supply_chain_data = construct_supply_chain_data(mean_demand, mfg_site_capacity, std_dev_demand, distribution_opening_costs, transport_cost_m_to_d, transport_cost_d_to_c)
     
     # Consruct and run optimizer
-    opening_distribution_costs, total_transport_cost, open_distribution_decisions = optimize(distribution_opening_costs, solve_infeasibility=False)
+    num_distribution_sites = len(distribution_opening_costs)
+    total_open_distribution_costs, total_cost, open_distribution_decisions = optimize(supply_chain_data, sim_params, num_distribution_sites)
     
-    print(opening_distribution_costs, total_transport_cost)
+    print(total_open_distribution_costs, total_cost)

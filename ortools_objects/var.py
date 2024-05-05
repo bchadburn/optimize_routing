@@ -60,9 +60,9 @@ class IndexedORBoolVariable(IndexedComponent):
         self._solved = False
         new_vars = solver.NumVariables()
         if logger:
-            logger.info(f"Added variable {self._name} to model")
+            logger.debug(f"Added variable {self._name} to model")
             if self._log_cardinality:
-                logger.info(
+                logger.debug(
                     f"Variable {self._name} has {new_vars-original_vars} variables added."
                 )
         self._data = var_dict

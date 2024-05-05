@@ -89,7 +89,7 @@ class IndexedORParam(IndexedComponent):
     def log_parameter_values(self, logger: logging.Logger):
         for index in self:
             if self[index] != 0:
-                logger.info(
+                logger.debug(
                     f"Value of {self._name} at indices {self._index_name}: {index}  is {self[index]}."
                 )
 

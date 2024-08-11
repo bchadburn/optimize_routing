@@ -1,10 +1,9 @@
 from typing import List, Union
 
-from ortools.linear_solver import pywraplp
+from ortools.math_opt.python import mathopt
 
 import utils.log as log
 from optimizer.construct_data_objects import SimulationParameters, SupplyChainData
-from optimizer.math_model_constraints import minimize_cost_objective
 from optimizer.math_model_declaration import create_math_model
 from ortools_objects.model import ORToolsCPModel
 
@@ -88,7 +87,7 @@ def optimize(supply_chain_data, sim_params, num_distribution_sites: list, solve_
     or_math_model.construct_model()
 
     status = or_math_model.solve_model()
-    if status != pywraplp.Solver.OPTIMAL:
+    if status != mathopt.TerminationReason.OPTIMAL:
         logger.info("Optimizer didn't find optimal solution")
         none_dist_list = [None for _ in range(num_distribution_sites)]
         return none_dist_list, float('inf'), none_dist_list

@@ -67,7 +67,7 @@ def construct_supply_chain_data(mean_demand: list, mfg_site_capacity: list, std_
 
 def optimize(supply_chain_data, sim_params, num_distribution_sites: list, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
     """Constructs solver """
-    logger = log.get_logger("MathOpt Solver")
+    logger = log.get_logger("MathOpt Model")
     
     or_math_model = ORToolsCPModel(
         logger=logger,

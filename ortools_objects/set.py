@@ -18,7 +18,7 @@ class ORSet(ORComponent):
 
     model.s_distribution_sites = ORSet(name='foo', doc='foo', initialize=['site0', 'site1', 'site2', ...])
 
-    Now that the set is create, I can use it to create an indexed parameter (see param.py), indexed constraint (see constraint.py),
+    Now that the set is created, I can use it to create an indexed parameter (see param.py), indexed constraint (see constraint.py),
     and all other model components.
     """
 
@@ -50,9 +50,24 @@ class ORSet(ORComponent):
         Returns:
             list: List of tuples containing the product of the current set (self) and any other sets passed to this function.
         """
+        
+        
         from itertools import product
 
-        return list(product(self._data, *[arg._data for arg in args]))
+        # Sub-function to take care of case when multi-index set is compound and multi-dimensional
+        def convert(data):
+            result = []
+            for item in data:
+                if isinstance(item, tuple):
+                    result.extend(convert(item))
+                else:
+                    result.append(item)
+            return tuple(result)
+        
+        return [
+            convert(item)
+            for item in list(product(self._data, *[arg._data for arg in args]))
+        ]
 
     # Returns the data in the set if called as function
     def __call__(self):

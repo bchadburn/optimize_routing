@@ -1,3 +1,4 @@
+
 import logging
 from numbers import Number
 from typing import Union
@@ -87,9 +88,11 @@ class IndexedORParam(IndexedComponent):
             return IndexedComponent._getitem_when_not_present(self, index)
 
     def log_parameter_values(self, logger: logging.Logger):
+        if not logger:
+            return
         for index in self:
             if self[index] != 0:
-                logger.debug(
+                logger.info(
                     f"Value of {self._name} at indices {self._index_name}: {index}  is {self[index]}."
                 )
 

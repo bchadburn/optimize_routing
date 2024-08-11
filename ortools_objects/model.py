@@ -42,11 +42,11 @@ class ORToolsCPModel:
             Other KWARGS (Optional): Can be used in any way to pass information to the model to be used by constraints in the form of model_config[key]
         """
         # Create the solver
-        self.mathopt_model: mathopt.Model = mathopt.Model(name="mathopt Model")
+        self.mathopt_model: mathopt.Model = mathopt.Model(name="MathOpt Model")
         # Objective and model constructed attributes
         self.model_constructed = False
         
-        self_solve_paramters = mathopt.SolveParamters()
+        self.solve_paramters = mathopt.SolveParameters()
         # Set the model options using kwargs
         if kwds.pop("solver_log", True):
             self.solve_paramters.enable_output = True
@@ -68,10 +68,12 @@ class ORToolsCPModel:
             return ComponentDecorator(
                 self, ComponentFactory.retrieve_component(component_name)
             )
+            
         raise AttributeError(
             f"Attribute {component_name} is not a valid component type"
             
         )
+        
     def validate_model(self):
         """Validate the model to make sure that two model objects don't have the same name"""
         from collections import Counter
@@ -99,7 +101,7 @@ class ORToolsCPModel:
                 and value.ctype == "var"
                 and not value.is_constructed()
             ):
-                value.construct(self.lp_solver, self.logger)
+                value.construct(self, self.logger)
 
         for value in self.__dict__.values():
             if (
@@ -107,19 +109,26 @@ class ORToolsCPModel:
                 and value.ctype == "constraint"
                 and not value.is_constructed()
             ):
-                value.construct(self, self.lp_solver, self.logger)
+                value.construct(self, self, self.logger)
 
         # Construct the objective
-        self.objective.construct(self, self.lp_solver)
+        for value in self.__dict__.values():
+            if (
+                isinstance(value, ORComponent)
+                and value.ctype == "objective"
+                and not value.is_constructed()
+            ):
+                value.construct(self, self.logger)
+                
         if self.logger:
-            self.logger.info(self.lp_solver.ExportModelAsLpFormat(False))
+            self.logger.debug(self.mathopt_model.export_model())
         self.model_constructed = True
 
     def process_results(self):
         """Take all variable results in attribute dictionary and process the results"""
         for value in self.__dict__.values():
             if isinstance(value, ORComponent) and value.ctype == "var":
-                value.process_result(self.logger if self.logger else None)
+                value.process_result(self.result, self.logger if self.logger else None)
 
     def solve_model(self):
         """Solve generated math model. Model must be constructed prior to call or
@@ -151,9 +160,10 @@ class ORToolsCPModel:
                 )
                 return self.status
             else:
-                self.logger.warning(
-                    "Feasible solution not found. Check model LP file for possible infeasibilities or run with slack variables on."
-                )
+                if self.logger:
+                    self.logger.warning(
+                        "Feasible solution not found. Check model LP file for possible infeasibilities or run with slack variables on."
+                    )
                 return None
         else:
             raise AttributeError(

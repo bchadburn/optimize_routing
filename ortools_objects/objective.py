@@ -1,8 +1,6 @@
 import logging
 from typing import Callable
 
-from ortools.linear_solver import pywraplp
-
 from ortools_objects.component import ORComponent
 from ortools_objects.model import ORToolsCPModel
 
@@ -44,23 +42,21 @@ class ORObjective(ORComponent):
 
     def construct(
         self,
-        model: ORToolsCPModel,
-        solver: pywraplp.Solver,
+        model_wrapper: ORToolsCPModel,
         logger: logging.Logger = None,
     ):
         """Add the objective function into the model using the rule
 
         Args:
-            model (ORToolsCPModel): Total model object
-            solver (pywraplp.Solver): Solver for which to add the objective
+            model_wrapper (ORToolsCPModel): Total model object
             logger (logging.Logger, Optional): Logger to log information about the objective
         """
-        original_vars = solver.NumVariables()
+        original_vars = len(list(model_wrapper.mathopt_model.variables()))
         if self._sense == "minimize":
-            solver.Minimize(self._rule(model))
+            model_wrapper.mathopt_model.minimize(self._rule(model_wrapper))
         else:
-            solver.Maximize(self._rule(model))
-        new_vars = solver.NumVariables()
+            model_wrapper.mathopt_model.maximize(self._rule(model_wrapper))
+        new_vars = len(list(model_wrapper.mathopt_model.variables()))
         if logger:
             logger.info(
                 f"Added objective to model. Added {new_vars-original_vars} variables to model."

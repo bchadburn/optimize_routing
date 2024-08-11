@@ -7,9 +7,9 @@ class _GenericComponentDecorator:
         self._model = model
         self._component = component 
         self._args = args
-        self.kwargs = kwargs
+        self._kwargs = kwargs
         
-    def _call_(self, rule=None):
+    def __call__(self, rule=None):
         model_prefix = self._component["model_prefix"]
         component_object = self._component["component_object"]
         if hasattr(self._model, f"{model_prefix}{rule.__name__}"):

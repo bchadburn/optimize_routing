@@ -35,7 +35,7 @@ class IndexedORStandardConst(IndexedComponent):
                 == model.v_example2_example2[time_period, site]
             )
 
-    Once we havce the callable function, we can create a IndexedORConstraint object. Since the constraint is indexed over time period and site, we want to pass
+    Once we have the callable function, we can create a IndexedORConstraint object. Since the constraint is indexed over time period and site, we want to pass
     in these arguments as ORSet objects:
 
     model.time_set = ORSet(name='time_index', doc='time_index', initialize=[0, 1,...])
@@ -45,7 +45,7 @@ class IndexedORStandardConst(IndexedComponent):
     model.example_constraint = IndexedORStandardConst(model.time_set, model.site_set, name='example', doc='example', rule=example_definition)
 
     When model.construct_model() is called, the construct method of model.example_constraint will be called, which will create a dictionary in the format:
-    {(time_index, site_index): pywraplp.Constraint} for each combination of time period and site indices.
+    {(time_index, site_index): mathop.Variable} for each combination of time period and site indices.
 
 
     In the above function, the indexed set allows the constraint to sum over unevent numbers of piecewise indices for different sets. It should be noted that
@@ -182,7 +182,7 @@ class ScalarORStandardConst(ORComponent):
         ORComponent.__init__(self, (), **kwds)
         assert (
             self._rule.__code__.co_argcount == 1
-        ), "Scalar constraint rule function must only contain a call to model object and nothinbg else"
+        ), "Scalar constraint rule function must only contain a call to model object and nothing else"
 
     def construct(
         self,

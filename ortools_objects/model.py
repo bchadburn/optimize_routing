@@ -46,13 +46,13 @@ class ORToolsCPModel:
         # Objective and model constructed attributes
         self.model_constructed = False
         
-        self.solve_paramters = mathopt.SolveParameters()
+        self.solve_parameters = mathopt.SolveParameters()
         # Set the model options using kwargs
         if kwds.pop("solver_log", True):
-            self.solve_paramters.enable_output = True
-        self.solve_paramters.random_seed = kwds.pop("seed", 0)
-        self.solve_paramters.relative_gap_tolerance = kwds.pop("rel_gap", 0.01)
-        self.solve_paramters.time_limit = timedelta(seconds=kwds.pop("max_time", 1200))
+            self.solve_parameters.enable_output = True
+        self.solve_parameters.random_seed = kwds.pop("seed", 0)
+        self.solve_parameters.relative_gap_tolerance = kwds.pop("rel_gap", 0.01)
+        self.solve_parameters.time_limit = timedelta(seconds=kwds.pop("max_time", 1200))
 
         self.logger = kwds.pop("logger", None)
         # Save remaining kwargs to model config
@@ -145,7 +145,7 @@ class ORToolsCPModel:
             self.result = mathopt.solve(
                 self.mathopt_model,
                 mathopt.SolverType.HIGHS,
-                params=self.solve_paramters
+                params=self.solve_parameters
             )
             
             self.status = self.result.termination.reason

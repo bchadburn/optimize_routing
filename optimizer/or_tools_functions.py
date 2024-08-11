@@ -1,5 +1,6 @@
-import ortools
+import numpy as np
 import sympy
+from ortools.math_opt.python import mathopt
 from sympy import Add, Max
 from sympy.core.numbers import Number
 
@@ -13,25 +14,25 @@ def convert_expr_to_ortools(
     expr: sympy.core.expr.Expr,
     model: ORToolsCPModel,
     time_index: int = None,
-) -> ortools.linear_solver.pywraplp.Variable:
+    current_variables: dict[str, int] = {}
+) -> mathopt.LinearExpression:
     """Takes in a sympy expression representing an objective function
     and translates it into a solver expression for ORTools.
 
     Args:
         expr (sympy.core.expr.Expr): Expression in sympy to be translated
-        solver (ortools.linear_solver.pywraplp.Solver): Solver in ORTools to add the expression/variables to
         model (ORToolsCPModel): Model containing variables to be used
         time_index (int, Optional): Time index for pressure expressions, defaults to None (not needed for cost expr)
 
     Returns:
-        ortools.linear_solver.pywraplp.Variable: _description_
+        Linear OR Tools solver expression representing the sympy expression passed as an input
     """
 
     def return_args(expr, model, time_index):
         list_args = []
         if hasattr(expr, "args"):
             for arg in expr.args:
-                add_arg = convert_expr_to_ortools(arg, model, time_index)
+                add_arg = convert_expr_to_ortools(arg, model, time_index, current_variables)
                 list_args.append(add_arg)
         return list_args
 
@@ -54,14 +55,17 @@ def convert_expr_to_ortools(
             raise NotImplementedError("Multiplication of 3+ vars is not supported.")
         return mul_expr
 
-    def define_max(solver, str_expr):
+    def define_max(str_expr, model:ORToolsCPModel):
         str_expr = "'" + str_expr.replace("-", "_minus_") + "'"
-        aux_var = solver.NumVar(0.0, solver.infinity(), str_expr)
+        if str_expr in current_variables:
+            aux_var = model.mathopt_model.get_variable(current_variables[str_expr])
+        else:
+            aux_var = model.mathopt_model.add_variable(lb=0.0, ub=np.inf, name=str_expr)
         return aux_var
 
     def set_max_constraints(args, aux_var, model, time_index):
         for arg in args.args:
-            max_var = convert_expr_to_ortools(arg, model, time_index)
+            max_var = convert_expr_to_ortools(arg, model, time_index, current_variables)
             model.lp_solver.Add(aux_var >= max_var)
 
     if isinstance(expr, Number):

@@ -1,12 +1,9 @@
 import logging
 from typing import Callable
 
-from ortools.linear_solver import pywraplp
-
 from ortools_objects.component import ORComponent
 from ortools_objects.indexed_component import IndexedComponent
 from ortools_objects.model import ORToolsCPModel
-from ortools_objects.set import ORSet
 
 
 class IndexedORStandardConst(IndexedComponent):
@@ -78,10 +75,12 @@ class IndexedORStandardConst(IndexedComponent):
 
         # Initialize the rest of the component
         IndexedComponent.__init__(self, *args, **kwds)
-
-        assert self._rule.__code__.co_argcount == (
-            self.dim() + 1
-        ), "Rule function must contain arguments for model and one for each index set type"
+        
+        # Only check dimension if index set actually exists, otherwise will error unexpectedly
+        if len(self._index_set) !=0:
+            assert self._rule.__code__.co_argcount == (
+                self.dim() + 1
+            ), "Rule function must contain arguments for model and one for each index set type"
 
     def _validate_args(self, args):
         """Checks to make sure all args are ORSets.
@@ -93,48 +92,57 @@ class IndexedORStandardConst(IndexedComponent):
 
     def construct(
         self,
-        full_model_object: ORToolsCPModel,
-        solver: pywraplp.Solver,
+        model_wrapper: ORToolsCPModel,
         logger: logging.Logger = None,
     ) -> None:
         """Constructs the rule for each index in the index set of the indexed constraint.
 
         Args:
-            full_model_object (ORToolsCPModel): Full model object containing all variables, sets, and parameters.
-            solver (pywraplp.Solver): Pywraplp solver into which the constraint will be inserted.
+            model_wrapper (ORToolsCPModel): Full model object containing all variables, sets, and parameters.
             logger (logging.Logger): Logger (optional). Defaults to None.
 
         Returns:
             dict: Dictionary of name/index of the constraint with the pywraplp constraints as the values.
         """
         if logger:
-            logger.info(f"Began adding constraint {self._name} to model.")
-        original_const = solver.NumConstraints()
+            logger.debug(f"Began adding constraint {self._name} to model.")
+            original_const = len(list(model_wrapper.mathopt_model.linear_constraints()))
         if len(self._index_set) == 0:
             return dict()
         if isinstance(self._index_set[0], tuple):
             rule_dict = {
-                index: [
-                    solver.Add(expr) for expr in self._rule(full_model_object, *index)
+                index: (
+                    [
+                        model_wrapper.mathopt_model.add_linear_constraint(expr) 
+                        for expr in self._rule(model_wrapper, *index)
                 ]
-                if isinstance(self._rule(full_model_object, *index), list)
-                else solver.Add(self._rule(full_model_object, *index))
+                if isinstance(self._rule(model_wrapper, *index), list)
+                else model_wrapper.mathopt_model.add_linear_constraint(
+                    self._rule(model_wrapper, *index)
+                    )
+                )
                 for index in self._index_set
             }
         else:
             rule_dict = {
-                index: [
-                    solver.Add(expr) for expr in self._rule(full_model_object, index)
+                index: (
+                    [
+                        model_wrapper.mathopt_model.add_linear_constraint(expr) 
+                        for expr in self._rule(model_wrapper, index)
                 ]
-                if isinstance(self._rule(full_model_object, index), list)
-                else solver.Add(self._rule(full_model_object, index))
+                if isinstance(self._rule(model_wrapper, index), list)
+                else model_wrapper.mathopt_model.add_linear_constraint(
+                    self._rule(model_wrapper, index)
+                    )
+                )
                 for index in self._index_set
             }
-        new_const = solver.NumConstraints()
+            
         if logger:
-            logger.info(f"Added constraint {self._name} to model")
+            new_const = len(list(model_wrapper.methopt_model.linear_constraints()))
+            logger.debug(f"Added constraint {self._name} to model")
             if self._log_cardinality:
-                logger.info(
+                logger.debug(
                     f"Constraint {self._name} has {new_const-original_const} constraints added."
                 )
         self._data = rule_dict
@@ -178,20 +186,17 @@ class ScalarORStandardConst(ORComponent):
 
     def construct(
         self,
-        full_model_object: ORToolsCPModel,
-        solver: pywraplp.Solver,
+        model_wrapper: ORToolsCPModel,
         logger: logging.Logger = None,
     ):
         """Constructs a single constraint
 
         Args:
-            full_model_object (ORToolsCPModel): Full mode object with all constraints, variables, parameters, and objective
-            solver (pywraplp.Solver): Solver to which the constraint should be added.
+            model_wrapper (ORToolsCPModel): Full mode object with all constraints, variables, parameters, and objective
             logger (logging.Logger, optional): Optional loggger. Defaults to None.
-
-        Returns:
-            _type_: _description_
         """
         if logger:
             logger.info(f"Added scalar constraint {self._name} to model")
-        self._data = solver.Add(self._rule(full_model_object))
+        self._data = model_wrapper.mathopt_model.add_linear_constraint(
+            self._rule(model_wrapper)
+            )

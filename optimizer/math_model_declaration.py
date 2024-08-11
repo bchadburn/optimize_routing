@@ -24,25 +24,25 @@ def _add_base_model_sets(
     
     model.s_time_indices = ORSet(
         name="time_index",
-        doc="List of time indices for model",
+        doc="list of time indices for model",
         initialize=[time_idx for time_idx in range(sim_params.num_days)],
     )
     
     model.s_manufacturing_sites = ORSet(
         name="s_manufacturing_sites",
-        doc="List of manufacturing sites",
+        doc="list of manufacturing sites",
         initialize=list(supply_chain_data.manufacturing_sites.keys()),
     )
     
     model.s_distribution_sites = ORSet(
         name="s_distribution_sites", 
-        doc="List of distribution sites", 
+        doc="list of distribution sites", 
         initialize=list(supply_chain_data.distribution_sites.keys())
     )
         
     model.s_customers = ORSet(
         name="s_customers", 
-        doc="List of s_customers sites", 
+        doc="list of s_customers sites", 
         initialize=list(supply_chain_data.customers.keys())
     )
     
@@ -64,29 +64,29 @@ def _add_base_model_parameters(
     """
     # Create parameters
     model.p_manufacturing_site_capacity = IndexedORParam(model.s_manufacturing_sites, name="p_manufacturing_site_capacity",
-        doc="Avg daily demand from customers", initialize={
+        doc="avg daily demand from customers", initialize={
             manufacturing_site: supply_chain_data.manufacturing_sites[manufacturing_site].capacity
             for manufacturing_site in model.s_manufacturing_sites()
         }
     )
         
     model.p_big_m = ScalarORParam(
-        name="big_m", doc="Big M value", initialize=10000
+        name="big_m", doc="big M value", initialize=10000
     )
 
     model.p_decision_rolling_period = ScalarORParam(
-        name="p_distribution_site_rolling_period", doc="Number of days distribution site must remain open once opened", initialize=sim_params.decision_rolling_period
+        name="p_distribution_site_rolling_period", doc="number of days distribution site must remain open once opened", initialize=sim_params.decision_rolling_period
     ) 
     
     model.p_distribution_opening_cost = IndexedORParam(model.s_distribution_sites, name="p_distribution_opening_cost",
-        doc="Cost of opening distribution", initialize={
+        doc="cost of opening distribution", initialize={
             distribution_site: supply_chain_data.distribution_sites[distribution_site].opening_cost
             for distribution_site in model.s_distribution_sites()
         }
     )
  
     model.p_transport_cost_m_to_d = IndexedORParam(model.s_manufacturing_sites, model.s_distribution_sites, name="p_transport_cost_m_to_d",
-        doc="Transportation cost from manufacturing site to distribution site", initialize={
+        doc="transportation cost from manufacturing site to distribution site", initialize={
             (manufacturing_site, distribution_site): supply_chain_data.manufacturing_sites[manufacturing_site].transport_cost_m_to_d[distribution_site]
             for distribution_site in model.s_distribution_sites()
             for manufacturing_site in model.s_manufacturing_sites()
@@ -94,7 +94,7 @@ def _add_base_model_parameters(
     )       
        
     model.p_transport_cost_d_to_c = IndexedORParam(model.s_distribution_sites, model.s_customers, name="p_transport_cost_d_to_c",
-        doc="Transportation cost from distribution site to customer", initialize={
+        doc="transportation cost from distribution site to customer", initialize={
             (distribution_site, customer): supply_chain_data.distribution_sites[distribution_site].transport_cost_d_to_c[customer]
             for distribution_site in model.s_distribution_sites()
             for customer in model.s_customers()
@@ -107,7 +107,7 @@ def _add_base_model_parameters(
         model.s_time_indices,
         model.s_customers,
         name="s_mean_demand",
-        doc="Avg daily demand from customers",
+        doc="avg daily demand from customers",
         initialize={
             (time_idx, cust_idx): max(0, np.random.normal(supply_chain_data.customers[cust_idx].mean_demand, supply_chain_data.customers[cust_idx].std_dev_demand)) 
             for time_idx in model.s_time_indices()
@@ -130,14 +130,14 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_distribution_sites,
         name="distribution_cost_incurred",
-        doc="Boolean indicating distribution was turned on (indicating a cost was incurred) during a specific time step",
+        doc="boolean indicating distribution was turned on (indicating a cost was incurred) during a specific time step",
     ) 
     
     model.bv_distribution_on = IndexedORBoolVariable(
         model.s_time_indices,
         model.s_distribution_sites,
         name="distribution_on",
-        doc="Whether or not a certain distribution site is on (either turned on or is remainin on) during a specific time step",
+        doc="whether or not a certain distribution site is on (either turned on or is remainin on) during a specific time step",
     )
 
     model.v_transport_m_to_d = IndexedORContinuousVariable(
@@ -145,7 +145,7 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_manufacturing_sites,
         name="transport_m_to_d",
-        doc="Number of shipments from manufacturing sites to distribution sites",
+        doc="number of shipments from manufacturing sites to distribution sites",
         log_solution=True,
     )
 
@@ -154,7 +154,7 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_customers,
         name="transport_d_to_c",
-        doc="Number of shipments from distribution sites to customers",
+        doc="number of shipments from distribution sites to customers",
         log_solution=True,
     )
 
@@ -202,27 +202,33 @@ def _add_slack_variables(model: ORToolsCPModel) -> None:
     
     
 def _add_base_model_constraints(model: ORToolsCPModel) -> None:
-    """Adds model constraints by invoking functions defined in the constraints file. 
-    Functions are associated with specific elements of an index. To skip an index, 
-    use if-else statement with pass.
+    """Adds constraints, or the "subject to" part of the math model. Each
+    of these call a function defined in the constraints file. For more information on those,
+    see the file referenced by the "constraint"
 
     Args:
         model (ORToolsCPModel): Model containing all sets, parameters, variables, and constraints.
     """
-   
-    model.c_distribution_cost_incurred_boolean_rolling_constraint = IndexedORStandardConst(
-        model.s_time_indices,
-        model.s_distribution_sites,
-        name="distribution_cost_incurred_constraint",
-        doc="Forces boolean indicating a cost was incurred for opening distribution site to be triggered only once within a single rolling window",
-        rule=constraint.distribution_cost_boolean_incurred_rolling_constraint,
-    )  
     
-    model.c_distribution_opening_duration_rolling_window_constraint = IndexedORStandardConst(
+   @model.IndexedORStandardConst(
+       model.s_time_indices,
+       model.s_distribution_sites,
+       name="distribution_cost_incurred_constraint",
+       doc="forces boolean indicating a cost was incurred for opening distribution site to be triggered only once within a single rolling window"
+    )  
+    def distribution_cost_boolean_incurred_rolling_constraint(model, time_period, distribution_site):
+    """Rolling Constraint to ensure the cost of turning on distribution site is only assigned once within a set amount of time (decision_rolling_period). 
+    The distribution_site_open_duration_rolling_constraint will then be used to ensure the site remains open for set amount of time."""
+    open_duration = model.p_decision_rolling_period[None]
+    min_open_day = max(0, time_period-open_duration+1)
+    return sum([model.bv_distribution_cost_incurred[duration_day, distribution_site] 
+                        for duration_day in range(min_open_day, time_period+1)]) <= 1
+    
+    @model.IndexedORStandardConst(
         model.s_time_indices,
         model.s_distribution_sites,
         name="distribution_open_constraint",
-        doc="Forces distribution to remain open once opened for a set number of days",
+        doc="forces distribution to remain open once opened for a set number of days",
         rule=constraint.distribution_site_open_duration_rolling_constraint,
     )
       
@@ -231,7 +237,7 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_customers,
         name="distribution_status_by_d_to_c_supply",
-        doc="Ensure DC status coincides with distribution supply",
+        doc="ensure DC status coincides with distribution supply",
         rule=constraint.distribution_status_constrained_by_d_to_c_supply
     )
 
@@ -240,7 +246,7 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_manufacturing_sites,
         name="distribution_status_constrained_by_m_to_d_supply",
-        doc="Ensure DC status coincides with manufacturing supply",
+        doc="ensure DC status coincides with manufacturing supply",
         rule=constraint.distribution_status_constrained_by_m_to_d_supply,
     )
     
@@ -248,7 +254,7 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_manufacturing_sites,
         name="manufacturing_supply_equal_capacity",
-        doc="Ensure manufacturing supply, i.e. the number of products shipped to all distribution sites, is equal to supply capacity supported by the manufacturing site",
+        doc="ensure manufacturing supply, i.e. the number of products shipped to all distribution sites, is equal to supply capacity supported by the manufacturing site",
         rule=constraint.distribution_supply_equal_capacity
     )
         
@@ -256,7 +262,7 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_customers,
         name="distribution_shipments_equal_customer_demand",
-        doc="Ensure distribution shipments is equal to the customer demand",
+        doc="ensure distribution shipments is equal to the customer demand",
         rule=constraint.distribution_shipments_equal_customer_demand
     )
     
@@ -264,14 +270,14 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_distribution_sites, 
         name="distribution_shipments_equal_total_received_shipments",
-        doc="Ensure distribution shipments is equal to received shipments",
+        doc="ensure distribution shipments is equal to received shipments",
         rule=constraint.distribution_shipments_equal_total_received_shipments
     )
 
 def _add_model_objective(model: ORToolsCPModel):
     model.objective = ORObjective(
         name="minimum_cost_objective",
-        doc="Minimum cost expression generated by sympy passed via model config",
+        doc="minimum cost expression generated by sympy passed via model config",
         rule=constraint.minimize_cost_objective,
     )
 

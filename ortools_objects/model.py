@@ -33,7 +33,7 @@ class ORToolsCPModel:
         empty attributes and sets/parameters imported from the data model.
 
         Kwargs:
-            solver (str, Optional): Solver to use. Defaults to SCIP.
+            solver (str, Optional): Solver to use. Defaults to MathOptSolver.
             max_time (Number, Optional): Time limit of solver in sections. Defaults to 30.
             rel_gap (Number, Optional): Gap for MIP that is allowed. Defaults to 0.01 (1%).
             log (bool, Optional): Declares whether or not to print detailed log. Defaults to True.

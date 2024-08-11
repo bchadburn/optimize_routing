@@ -7,7 +7,7 @@ from sympy.core.numbers import Number
 import utils.log as log
 from ortools_objects.model import ORToolsCPModel
 
-logger = log.get_logger("SCIPSolver")
+logger = log.get_logger("MathOptSolver")
 
 
 def convert_expr_to_ortools(

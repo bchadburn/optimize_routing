@@ -1,3 +1,6 @@
+from numbers import Number
+from typing import Union
+
 from ortools_objects.component import ORComponent
 
 
@@ -59,4 +62,29 @@ class ORSet(ORComponent):
     def __iter__(self):
         yield from self._data
 
+    def previous(self, element: Union[str, Number]):
+        """Returns the previous element. If its the first element in the set, the last element is returned.
+        
+        Args:
+            element (str, Number): Element in the set for which the previous element is to be found
+        
+        Returns:
+            str, Number: Element in the set that is previous to the element passed in as an argument
+        """
+        idx = self._data.index(element)
+        return self._data[idx - 1]
+    
+    def next(self, element: Union[str, Number]):
+        """Returns the next element in the set. If its the last element in the set, None is returned
+        
+        Args:
+            element (str, Number): Element in the set
+        
+        Returns: (str, Number): Next element in the set"""
+    
+        idx = self._data.index(element)
+        if idx == len(self._data) - 1:
+            return None
+        return self._data[(idx + 1)]
+        
     __mul__ = cross

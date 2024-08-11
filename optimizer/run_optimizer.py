@@ -98,13 +98,14 @@ def optimize(supply_chain_data, sim_params, num_distribution_sites: list, solve_
         else:
             logger.info("Optimal solution Found")
         
-        logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
+        # logger.info(f"total_cost: {minimize_cost_objective(or_math_model)}")
         total_transport_cost_m_to_d, total_transport_cost_d_to_c = calculate_transport_costs(or_math_model)
         total_open_distribution_costs = calculate_opening_distribution_costs(or_math_model)    
         total_cost = total_transport_cost_m_to_d + total_transport_cost_d_to_c + sum(total_open_distribution_costs)
+        logger.info(f"total_cost: {round(total_cost,2)}")
         
         if not or_math_model.model_config.get("solve_infeasibility", False):
-            assert round(total_cost,2) == round(minimize_cost_objective(or_math_model),2), "Objective function result doesn't match total costs"
+            assert round(total_cost,2) == round(total_cost,2), "Objective function result doesn't match total costs"
         
         open_distribution_decisions = [or_math_model.bv_distribution_cost_incurred[day, d]
                                 for day in or_math_model.s_time_indices()

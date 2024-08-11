@@ -1,8 +1,11 @@
 from collections import defaultdict
+from datetime import timedelta
+from typing import Any
 
-from ortools.linear_solver import pywraplp
+from ortools.math_opt.python import mathopt
 
 from ortools_objects.component import ORComponent
+from ortools_objects.component_decorators import ComponentDecorator
 
 
 def factory():
@@ -39,24 +42,36 @@ class ORToolsCPModel:
             Other KWARGS (Optional): Can be used in any way to pass information to the model to be used by constraints in the form of model_config[key]
         """
         # Create the solver
-        self.lp_solver = pywraplp.Solver.CreateSolver(kwds.pop("solver", "SCIP"))
+        self.mathopt_model: mathopt.Model = mathopt.Model(name="mathopt Model")
         # Objective and model constructed attributes
-        self.objective = None
         self.model_constructed = False
+        
+        self_solve_paramters = mathopt.SolveParamters()
         # Set the model options using kwargs
         if kwds.pop("solver_log", True):
-            self.lp_solver.EnableOutput()
-        self.seed = kwds.pop("seed", 0)
-        self.rel_gap = kwds.pop("rel_gap", 0.01)
-        self.max_time = kwds.pop("max_time", 30)
-        self.lp_solver.SetSolverSpecificParametersAsString(
-            f"randomization/randomseedshift = {self.seed},limits/gap = {self.rel_gap},limits/time = {self.max_time}"
-        )
+            self.solve_paramters.enable_output = True
+        self.solve_paramters.random_seed = kwds.pop("seed", 0)
+        self.solve_paramters.relative_gap_tolerance = kwds.pop("rel_gap", 0.01)
+        self.solve_paramters.time_limit = timedelta(seconds=kwds.pop("max_time", 1200))
 
         self.logger = kwds.pop("logger", None)
         # Save remaining kwargs to model config
         self.model_config = kwds
 
+    def __getattr__(self, component_name: str) -> Any:
+        """Takes in a component type with some arguments. If the component name is valid (in the factor),
+        then it returns a Componentdecorator object, taking the component reference as an argument,
+        that can be used to add the component to the model."""
+        from ortools_objects.component_factory import ComponentFactory
+        
+        if str(component_name) in ComponentFactory():
+            return ComponentDecorator(
+                self, ComponentFactory.retrieve_component(component_name)
+            )
+        raise AttributeError(
+            f"Attribute {component_name} is not a valid component type"
+            
+        )
     def validate_model(self):
         """Validate the model to make sure that two model objects don't have the same name"""
         from collections import Counter
@@ -118,12 +133,18 @@ class ORToolsCPModel:
                 if isinstance(value, ORComponent) and value.ctype == "var":
                     value._solved = False
             # Solve the model
-            self.status = self.lp_solver.Solve()
+            self.result = mathopt.solve(
+                self.mathopt_model,
+                mathopt.SolverType.HIGHS,
+                params=self.solve_paramters
+            )
+            
+            self.status = self.result.termination.reason
             # If the status is optimal or feasible, return model results
-            if self.status == pywraplp.Solver.OPTIMAL:
+            if self.status == mathopt.TerminationReason.OPTIMAL:
                 self.process_results()
                 return self.status
-            elif self.status == pywraplp.Solver.FEASIBLE:
+            elif self.status == mathopt.TerminationReason.FEASIBLE:
                 self.process_results()
                 self.logger.warning(
                     "Feasible but not optimal solution found. Try giving the optimizer or a little longer to solve or increasing the relative gap option."

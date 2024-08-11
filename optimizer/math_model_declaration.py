@@ -210,77 +210,137 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         model (ORToolsCPModel): Model containing all sets, parameters, variables, and constraints.
     """
     
-   @model.IndexedORStandardConst(
+    @model.IndexedORStandardConst(
        model.s_time_indices,
        model.s_distribution_sites,
        name="distribution_cost_incurred_constraint",
        doc="forces boolean indicating a cost was incurred for opening distribution site to be triggered only once within a single rolling window"
     )  
     def distribution_cost_boolean_incurred_rolling_constraint(model, time_period, distribution_site):
-    """Rolling Constraint to ensure the cost of turning on distribution site is only assigned once within a set amount of time (decision_rolling_period). 
-    The distribution_site_open_duration_rolling_constraint will then be used to ensure the site remains open for set amount of time."""
-    open_duration = model.p_decision_rolling_period[None]
-    min_open_day = max(0, time_period-open_duration+1)
-    return sum([model.bv_distribution_cost_incurred[duration_day, distribution_site] 
-                        for duration_day in range(min_open_day, time_period+1)]) <= 1
+        """Rolling Constraint to ensure the cost of turning on distribution site is only assigned once within a set amount of time (decision_rolling_period). 
+        The distribution_site_open_duration_rolling_constraint will then be used to ensure the site remains open for set amount of time."""
+        open_duration = model.p_decision_rolling_period[None]
+        min_open_day = max(0, time_period-open_duration+1)
+        return sum([model.bv_distribution_cost_incurred[duration_day, distribution_site] 
+                            for duration_day in range(min_open_day, time_period+1)]) <= 1
     
     @model.IndexedORStandardConst(
         model.s_time_indices,
         model.s_distribution_sites,
         name="distribution_open_constraint",
         doc="forces distribution to remain open once opened for a set number of days",
-        rule=constraint.distribution_site_open_duration_rolling_constraint,
     )
+    def distribution_site_open_duration_rolling_constraint(model, time_period, distribution_site):
+        """Ensure the site remains open after distribution site was initially opened (i.e. time idx cost was encurred) for set amount of time."""
+        open_duration = model.p_decision_rolling_period[None]
+        min_open_day = max(0, time_period-open_duration+1)
+        bv_cost_incurred_rolling_period = sum([model.bv_distribution_cost_incurred[duration_day, distribution_site]
+                                            for duration_day in range(min_open_day, time_period+1)])
+        return model.bv_distribution_on[time_period, distribution_site] == bv_cost_incurred_rolling_period 
       
-    model.c_distribution_status_constrained_by_d_to_c_supply = IndexedORStandardConst(
+    @model.IndexedORStandardConst(
         model.s_distribution_sites,
         model.s_time_indices,
         model.s_customers,
         name="distribution_status_by_d_to_c_supply",
-        doc="ensure DC status coincides with distribution supply",
-        rule=constraint.distribution_status_constrained_by_d_to_c_supply
+        doc="ensure DC status coincides with distribution supply"
     )
+    def distribution_status_constrained_by_d_to_c_supply(model, distribution_site, time_period, customer):
+        return model.v_transport_d_to_c[distribution_site, time_period, customer] <= model.bv_distribution_on[time_period, distribution_site] * model.p_big_m[None]
 
-    model.c_distribution_status_constrained_by_m_to_d_supply = IndexedORStandardConst(
+    @model.IndexedORStandardConst(
         model.s_distribution_sites,
         model.s_time_indices,
         model.s_manufacturing_sites,
         name="distribution_status_constrained_by_m_to_d_supply",
-        doc="ensure DC status coincides with manufacturing supply",
-        rule=constraint.distribution_status_constrained_by_m_to_d_supply,
+        doc="ensure DC status coincides with manufacturing supply"
     )
+    def distribution_status_constrained_by_m_to_d_supply(model, distribution_site, time_period, manufacturing_site):
+        return (
+            model.v_transport_m_to_d[distribution_site, time_period, manufacturing_site] <= model.bv_distribution_on[time_period, distribution_site] * model.p_big_m[None]
+        )
     
-    model.c_manufacturing_supply_equal_capacity = IndexedORStandardConst(
+    @model.IndexedORStandardConst(
         model.s_time_indices,
         model.s_manufacturing_sites,
         name="manufacturing_supply_equal_capacity",
-        doc="ensure manufacturing supply, i.e. the number of products shipped to all distribution sites, is equal to supply capacity supported by the manufacturing site",
-        rule=constraint.distribution_supply_equal_capacity
+        doc="ensure manufacturing supply, i.e. the number of products shipped to all distribution sites, is equal to supply capacity supported by the manufacturing site"
     )
-        
-    model.c_distribution_shipments_equal_customer_demand = IndexedORStandardConst(
+    def distribution_supply_equal_capacity(model, time_period, manufacturing_site):
+        # Supply constraints so total mfg site supply is not more than capacity at a given distribution site  
+        total_supply_m = sum([model.v_transport_m_to_d[d, time_period, manufacturing_site] for d in model.s_distribution_sites()])
+        slack_var = sum([model.v_transport_m_to_d_capacity_slack[d, time_period, manufacturing_site] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+        return total_supply_m <= model.p_manufacturing_site_capacity[manufacturing_site] + slack_var
+    
+    @model.IndexedORStandardConst(
         model.s_time_indices,
         model.s_customers,
         name="distribution_shipments_equal_customer_demand",
-        doc="ensure distribution shipments is equal to the customer demand",
-        rule=constraint.distribution_shipments_equal_customer_demand
+        doc="ensure distribution shipments is equal to the customer demand"
     )
-    
-    model.c_distribution_shipments_equal_total_received_shipments = IndexedORStandardConst(
+    def distribution_shipments_equal_customer_demand(model, time_period, customer):
+        # Demand constraints so total shipments is equal to customer demand
+        added_shipments_slack_var = sum([model.v_transport_d_to_c_shipments_equal_demand_slack[d, time_period, customer] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+        added_customer_demand_slack_var = sum([model.v_transport_d_to_c_demand_slack[d, time_period, customer] for d in model.s_distribution_sites() if model.model_config.get("solve_infeasibility", False)])
+        return sum([model.v_transport_d_to_c[d, time_period, customer] for d in model.s_distribution_sites()]) + added_shipments_slack_var == model.p_customer_demand[time_period, customer] + added_customer_demand_slack_var
+
+    @model.IndexedORStandardConst(
         model.s_time_indices,
         model.s_distribution_sites, 
         name="distribution_shipments_equal_total_received_shipments",
-        doc="ensure distribution shipments is equal to received shipments",
-        rule=constraint.distribution_shipments_equal_total_received_shipments
+        doc="ensure distribution shipments is equal to received shipments"
     )
+    def distribution_shipments_equal_total_received_shipments(model, time_period, distribution_site):
+        # Limit distribution center shipments to the total of received shipments
+        total_shipment_from_m_to_d = sum([model.v_transport_m_to_d[distribution_site, time_period, m] for m in model.s_manufacturing_sites()])
+        total_shipment_from_d_to_c = sum([model.v_transport_d_to_c[distribution_site, time_period, customer] for customer in model.s_customers()])
+        
+        shipments_m_to_d_slack_var = sum([model.v_transport_m_to_d_shipments_slack[distribution_site, time_period, m] for m in model.s_manufacturing_sites() if model.model_config.get("solve_infeasibility", False)])
+        shipments_d_to_c_slack_var = sum([model.v_transport_d_to_c_shipments_slack[distribution_site, time_period, c] for c in model.s_customers() if model.model_config.get("solve_infeasibility", False)])
+
+        return total_shipment_from_m_to_d + shipments_m_to_d_slack_var == total_shipment_from_d_to_c + shipments_d_to_c_slack_var
 
 def _add_model_objective(model: ORToolsCPModel):
-    model.objective = ORObjective(
+    @model.ORObjective(
         name="minimum_cost_objective",
-        doc="minimum cost expression generated by sympy passed via model config",
-        rule=constraint.minimize_cost_objective,
+        doc="minimum cost expression generated by sympy passed via model config"
     )
-
+    def minimize_cost_objective(model):
+        if not model.model_config.get("solve_infeasibility", False):
+            total_cost = sum([model.p_distribution_opening_cost[d] * model.bv_distribution_cost_incurred[day, d]
+                                        for day in model.s_time_indices()
+                                        for d in model.s_distribution_sites()
+                                        ]) + \
+                            sum([model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for m in model.s_manufacturing_sites()]) + \
+                            sum([model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c[d, day, c]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for c in model.s_customers()])
+        else:
+            total_cost = sum([100*model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d_shipments_slack[d, day, m]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for m in model.s_manufacturing_sites()]) + \
+                        sum([100*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_shipments_slack[d, day, c]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for c in model.s_customers()]) + \
+                        sum([200*model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d_capacity_slack[d, day, m]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for m in model.s_manufacturing_sites()]) + \
+                        sum([500*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_shipments_equal_demand_slack[d, day, c]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for c in model.s_customers()]) + \
+                        sum([500*model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c_demand_slack[d, day, c]
+                                        for d in model.s_distribution_sites()
+                                        for day in model.s_time_indices()
+                                        for c in model.s_customers()]) 
+        return total_cost
 
 def create_math_model(
     model: ORToolsCPModel,
@@ -305,6 +365,244 @@ def create_math_model(
     _add_base_model_constraints(model)
     
     if model.model_config.get("solve_infeasibility", False):
+        model.logger.info("Slack variables used to solver for infeasibility")
         _add_slack_variables(model)
         
     _add_model_objective(model)
+
+
+
+
+
+# Example of using gray notation
+# def _compute_gray_notation(value: int) -> int:
+#     return value ^ (int(value / 2))
+
+
+# def _add_xval_model_sets....
+# ....
+
+#     model.s_bitwise_xval_binary_set = ORSet(
+#         name="xval_log_binary_set",
+#         doc="Takes advantage of logarithmic encoding style of Gray binary encoding schema to create a set of binary variables for xval",
+#         initialize=[
+#             (time_index, site, log_index)
+#             for time_index in model.s_time_indices
+#             for site in model.s_xval_segment_starts
+#             for log_index in range(
+#                 int(
+#                     ceil(
+#                         (
+#                             log(
+#                                 len(
+#                                     schedule_list_dict[time_index][
+#                                         f"effective_xval_gph_{site}_piecewise"
+#                                     ]
+#                                 )
+#                             )
+#                             / log(2)
+#                         )
+#                     )
+#                 )
+#             )
+#             if f"effective_xval_gph_{site}_piecewise" in schedule_list_dict[time_index]
+#         ],
+#     )
+#     model.s_bitwise_xval_binary_indexed_set = IndexedORSet(
+#         model.s_time_indices,
+#         model.s_xval_segment_starts,
+#         name="xval_log_binary_indexed_set",
+#         doc="Takes advantage of logarithmic encoding style of Gray binary encoding schema to create a set of binary variables for xval",
+#         initialize={
+#             (time_index, site): [
+#                 log_index
+#                 for log_index in range(
+#                     int(
+#                         ceil(
+#                             (
+#                                 log(
+#                                     len(
+#                                         schedule_list_dict[time_index][
+#                                             f"effective_xval_gph_{site}_piecewise"
+#                                         ]
+#                                     )
+#                                 )
+#                                 / log(2)
+#                             )
+#                         )
+#                     )
+#                 )
+#             ]
+#             for time_index in model.s_time_indices
+#             for site in model.s_xval_segment_starts
+#             if f"effective_xval_gph_{site}_piecewise" in schedule_list_dict[time_index]
+#         },
+#     )
+#     model.s_bitwise_binary_zeroes_indexed_set = IndexedORSet(
+#         model.s_bitwise_xval_binary_set,
+#         name="bitwise_binary_zeroes_indexed_set",
+#         doc="For each natural logarithm binary index, store which piecewise points should have the zero value constraint applied to them",
+#         initialize={
+#             (time_index, site, log_index): (
+#                 [0]
+#                 + [
+#                     point_index
+#                     for point_index in range(
+#                         1,
+#                         len(
+#                             schedule_list_dict[time_index][
+#                                 f"effective_xval_gph_{site}_piecewise"
+#                             ]
+#                         )
+#                         + 1,
+#                     )
+#                     if f"effective_xval_gph_{site}_piecewise"
+#                     in schedule_list_dict[time_index]
+#                     and (1 & _compute_gray_notation(point_index) >> log_index) == 0
+#                     and (1 & _compute_gray_notation(point_index - 1) >> log_index) == 0
+#                 ]
+#             )
+#             for time_index, site, log_index in model.s_bitwise_xval_binary_set
+#         },
+#     )
+#     model.s_bitwise_binary_ones_indexed_set = IndexedORSet(
+#         model.s_bitwise_xval_binary_set,
+#         name="bitwise_binary_ones_indexed_set",
+#         doc="For each natural logarithm binary index, store which piecewise points should have the one value constraint applied to them",
+#         initialize={
+#             (time_index, site, log_index): [
+#                 point_index
+#                 for point_index in range(
+#                     1,
+#                     len(
+#                         schedule_list_dict[time_index][
+#                             f"effective_xval_gph_{site}_piecewise"
+#                         ]
+#                     )
+#                     + 1,
+#                 )
+#                 if f"effective_xval_gph_{site}_piecewise"
+#                 in schedule_list_dict[time_index]
+#                 and (1 & _compute_gray_notation(point_index) >> log_index) == 1
+#                 and (1 & _compute_gray_notation(point_index - 1) >> log_index) == 1
+#             ]
+#             for time_index, site, log_index in model.s_bitwise_xval_binary_set
+#         },
+#     )
+
+
+# def _add_xval_model_variables(model: ORToolsCPModel, pipeline_name: str):
+#     model.v_log_piecewise_active = IndexedORBoolVariable(
+#         model.s_bitwise_xval_binary_set,
+#         name="piecewise_bool_log_active",
+#         doc="Whether or not the bit of the Gray encoding is active for SOS2 logarithmic encoding",
+#     )
+
+
+# def _add_xval_model_constraints(model: ORToolsCPModel):
+#     """
+#     Adds constraints to the OR-Tools CP model for the xval (xvalg Reducing Agent) model.
+
+#     Args:
+#         model (ORToolsCPModel): The OR-Tools CP model to add the constraints to.
+
+#     Returns:
+#         None
+#     """
+#     @model.IndexedORStandardConst(
+#         model.s_bitwise_xval_binary_set,
+#         name="binary_bitwise_ones_constraint",
+#         doc="Constraint that takes Gray notation with the individual piecewise points to enforce neighboring points to be one",
+#     )
+#     def binary_bitwise_ones_constraint(model, time_index, site, log_index):
+#         return (
+#             sum(
+#                 model.v_piecewise_point_weights[time_index, site, point_index]
+#                 for point_index in model.s_bitwise_binary_ones_indexed_set[
+#                     time_index, site, log_index
+#                 ]
+#             )
+#             <= model.v_log_piecewise_active[time_index, site, log_index]
+#         )
+
+#     @model.IndexedORStandardConst(
+#         model.s_bitwise_xval_binary_set,
+#         name="binary_bitwise_zeroes_constraint",
+#         doc="Constraint that takes Gray notation with the individual piecewise points to enforce neighboring points to be zero",
+#     )
+#     def binary_bitwise_zeroes_constraint(model, time_index, site, log_index):
+#         return sum(
+#             model.v_piecewise_point_weights[time_index, site, point_index]
+#             for point_index in model.s_bitwise_binary_zeroes_indexed_set[
+#                 time_index, site, log_index
+#             ]
+#         ) <= (1 - model.v_log_piecewise_active[time_index, site, log_index])
+
+
+
+# Piecewise examples
+
+# def minimum_piecewise_yval(model, time_period, site, piecewise_segment):
+#     return (
+#         model.v_piecewise_yval[time_period, site, piecewise_segment]
+#         - model.bv_piecewise_on[time_period, site, piecewise_segment]
+#         * model.p_piecewise_yval_min[time_period, site, piecewise_segment]
+#         >= 0
+#     )
+
+# def piecewise_linear_yval_xval_link(model, time_period, site, piecewise_segment):
+#     return (
+#         model.v_piecewise_yval[time_period, site, piecewise_segment]
+#         - model.p_piecewise_slope[time_period, site, piecewise_segment]
+#         * model.v_piecewise_xval[time_period, site, piecewise_segment]
+#         - model.p_piecewise_intercept[time_period, site, piecewise_segment]
+#         * model.bv_piecewise_on[time_period, site, piecewise_segment]
+#         == 0
+#     )
+
+# def piecewise_xval_value_max(model, time_period, site, piecewise_segment):
+#     return (
+#         model.p_piecewise_xval_max[time_period, site, piecewise_segment]
+#         * model.bv_piecewise_on[time_period, site, piecewise_segment]
+#         - model.v_piecewise_xval[time_period, site, piecewise_segment]
+#         >= 0
+#     )
+
+# def piecewise_yval_sos_constraint(model, time_period, site):
+#     return (
+#         sum(
+#             model.bv_piecewise_on[time_period, site, piecewise_segment]
+#             for piecewise_segment in model.s_piecewise_yval_indexed_set[
+#                 time_period, site
+#             ]
+#         )
+#         <= 1
+#     )
+
+# def piecewise_yval_link(model, time_period, site):
+#     return (
+#         sum(
+#             model.v_piecewise_yval[time_period, site, piecewise_segment]
+#             for piecewise_segment in model.s_piecewise_yval_indexed_set[
+#                 time_period, site
+#             ]
+#         )
+#         == model.v_distribution_yval[time_period, site]
+#     )
+
+# def piecewise_xval_link(model, time_period, site):
+#     return (
+#         sum(
+#             model.v_piecewise_xval[time_period, site, piecewise_segment]
+#             for piecewise_segment in model.s_piecewise_yval_indexed_set[
+#                 time_period, site
+#             ]
+#         )
+#         == model.v_distribution_xval[time_period, site]
+#     )
+
+# def link_distribution_state(model, time_period, pump_site):
+#     return (
+#         model.v_distribution_yval[time_period, pump_site]
+#         <= model.bv_distribution_on[time_period, pump_site] * model.p_big_m[None][None]
+#     )

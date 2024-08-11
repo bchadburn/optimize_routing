@@ -109,7 +109,7 @@ class ORToolsCPModel:
                 and value.ctype == "constraint"
                 and not value.is_constructed()
             ):
-                value.construct(self, self, self.logger)
+                value.construct(self, self.logger)
 
         # Construct the objective
         for value in self.__dict__.values():
@@ -149,15 +149,16 @@ class ORToolsCPModel:
             )
             
             self.status = self.result.termination.reason
-            # If the status is optimal or feasible, return model results
+
             if self.status == mathopt.TerminationReason.OPTIMAL:
                 self.process_results()
                 return self.status
             elif self.status == mathopt.TerminationReason.FEASIBLE:
                 self.process_results()
-                self.logger.warning(
-                    "Feasible but not optimal solution found. Try giving the optimizer or a little longer to solve or increasing the relative gap option."
-                )
+                if self.logger:
+                    self.logger.warning(
+                        "Feasible but not optimal solution found. Try giving the optimizer or a little longer to solve or increasing the relative gap option."
+                    )
                 return self.status
             else:
                 if self.logger:

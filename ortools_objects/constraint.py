@@ -139,7 +139,7 @@ class IndexedORStandardConst(IndexedComponent):
             }
             
         if logger:
-            new_const = len(list(model_wrapper.methopt_model.linear_constraints()))
+            new_const = len(list(model_wrapper.mathopt_model.linear_constraints()))
             logger.debug(f"Added constraint {self._name} to model")
             if self._log_cardinality:
                 logger.debug(

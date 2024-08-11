@@ -86,7 +86,7 @@ class IndexedORBoolVariable(IndexedComponent):
         self._solved = True
         if logger and self._log_solution:
             for index in self:
-                logger.info(
+                logger.debug(
                     f"Variable {self._name} at indices {self._index_name}: {index} has value {round(self[index],2)}"
                 )
 
@@ -149,14 +149,14 @@ class ScalarORBoolVariable(ORComponent):
         self._constructed = True
         self._solved = False
         if logger:
-            logger.info(f"Added scalar variable {self._name} to model")
+            logger.debug(f"Added scalar variable {self._name} to model")
         self._data = solver.BoolVar(f"{self._name}")
 
     def process_result(self, logger: logging.Logger = None) -> None:
         self._solution = self._data.SolutionValue()
         self._solved = True
         if logger and self._log_solution:
-            logger.info(
+            logger.debug(
                 f"Scalar variable {self._name} has value {round(self._solution,2)}"
             )
 
@@ -259,9 +259,9 @@ class IndexedORContinuousVariable(IndexedComponent):
         }
         new_vars = solver.NumVariables()
         if logger:
-            logger.info(f"Added variable {self._name} to model")
+            logger.debug(f"Added variable {self._name} to model")
             if self._log_cardinality:
-                logger.info(
+                logger.debug(
                     f"Variable {self._name} has {new_vars-original_vars} variables added."
                 )
         self._solved = False
@@ -303,7 +303,7 @@ class IndexedORContinuousVariable(IndexedComponent):
         self._solved = True
         if logger and self._log_solution:
             for index in self:
-                logger.info(
+                logger.debug(
                     f"Variable {self._name} at indices {self._index_name}: {index} has value {round(self[index],2)}"
                 )
 
@@ -368,14 +368,14 @@ class ScalarORContinuousVariable(ORComponent):
         self._constructed = True
         self._solved = False
         if logger:
-            logger.info(f"Added scalar variable {self._name} to model")
+            logger.debug(f"Added scalar variable {self._name} to model")
         self._data = solver.NumVar(self._lb, self._ub, f"{self._name}")
 
     def process_result(self, logger: logging.Logger = None) -> None:
         self._solution = self._data.SolutionValue()
         self._solved = True
         if logger and self._log_solution:
-            logger.info(
+            logger.debug(
                 f"Scalar variable {self._name} has value {round(self._solution,2)}"
             )
 

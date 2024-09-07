@@ -84,7 +84,7 @@ def convert_expr_to_ortools(
         set_max_constraints(expr, aux_var, model, time_index)
         return aux_var
     # Example of checking for specific class in order to return variable from model
-    # elif isinstance(expr, VariableClassExampls):
+    # elif isinstance(expr, VariableClassExamples):
     #     return model.v_example[time_index, expr.site_name]
     else:
         raise NotImplementedError(f"{type(expr)} not supported")

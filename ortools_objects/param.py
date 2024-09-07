@@ -50,7 +50,7 @@ class IndexedORParam(IndexedComponent):
         self._initialize = kwds.pop("initialize")
         if not isinstance(self._initialize, dict):
             raise TypeError(
-                "Indexed parameter data must come in the form of a dictinoary"
+                "Indexed parameter data must come in the form of a dictionary"
             )
 
         # Initialize indexed components

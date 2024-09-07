@@ -1,6 +1,6 @@
 class _GenericComponentDecorator:
     """Decorator to add the component passed through the decorator cascade to the model tree.
-    This addds the component to the model and allows it to be constructed with the model construction.
+    This adds the component to the model and allows it to be constructed with the model construction.
     """
     
     def __init__(self, model, component, *args, **kwargs):
@@ -22,7 +22,7 @@ class _GenericComponentDecorator:
         
 class ComponentDecorator:
     """Wraps the generic component decorator, which preserves the model object and the component type.
-    To abstrat away all of the arguments not related to the model or component objects, another layer of abstractions is provided for the rest of the arguments.
+    To abstract away all of the arguments not related to the model or component objects, another layer of abstractions is provided for the rest of the arguments.
     """
     def __init__(self, model, component): 
         self._model = model

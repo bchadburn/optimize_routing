@@ -134,7 +134,7 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         model.s_time_indices,
         model.s_distribution_sites,
         name="distribution_on",
-        doc="whether or not a certain distribution site is on (either turned on or is remainin on) during a specific time step",
+        doc="whether or not a certain distribution site is on (either turned on or is remaining on) during a specific time step",
     )
 
     model.v_transport_m_to_d = IndexedORContinuousVariable(
@@ -161,7 +161,7 @@ def _add_slack_variables(model: ORToolsCPModel) -> None:
         model.s_distribution_sites,
         model.s_time_indices,
         model.s_manufacturing_sites,
-        name="ransport_m_to_d_shipments_slack",
+        name="transport_m_to_d_shipments_slack",
         log_solution=True,
     )
     
@@ -228,7 +228,7 @@ def _add_base_model_constraints(model: ORToolsCPModel) -> None:
         doc="forces distribution to remain open once opened for a set number of days",
     )
     def distribution_site_open_duration_rolling_constraint(model, time_period, distribution_site):
-        """Ensure the site remains open after distribution site was initially opened (i.e. time idx cost was encurred) for set amount of time."""
+        """Ensure the site remains open after distribution site was initially opened (i.e. time idx cost was incurred) for set amount of time."""
         open_duration = model.p_decision_rolling_period[None]
         min_open_day = max(0, time_period-open_duration+1)
         bv_cost_incurred_rolling_period = sum([model.bv_distribution_cost_incurred[duration_day, distribution_site]
@@ -498,7 +498,7 @@ def create_math_model(
 
 # def _add_xval_model_constraints(model: ORToolsCPModel):
 #     """
-#     Adds constraints to the OR-Tools CP model for the xval (xvalg Reducing Agent) model.
+#     Adds constraints to the OR-Tools CP model for the xval (xval Reducing Agent) model.
 
 #     Args:
 #         model (ORToolsCPModel): The OR-Tools CP model to add the constraints to.

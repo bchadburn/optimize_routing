@@ -19,10 +19,10 @@ class IndexedComponent(ORComponent):
     scalar objects extend the base component class directly. The way this is meant to work is to provide any number of sets as the argument array,
     and to provide other arguments (name, doc, etc.) as kwds.
 
-    All indexed components contain a dictionary as their data attribute with indices as the keys in the form of a single elemnt or tuple, and a value as the key.
+    All indexed components contain a dictionary as their data attribute with indices as the keys in the form of a single element or tuple, and a value as the key.
 
     The increased complexity comes from the _index_set attribute. If there are no arguments, the index set should not exist. If there is 1 argument, the
-    init dunder will make sure the arg is a set and assign it as the index set. Because index sets have a getitem dunder, it is then accessable via index.
+    init dunder will make sure the arg is a set and assign it as the index set. Because index sets have a getitem dunder, it is then accessible via index.
     In addition, for sets, since the dunder for iter is defined, you can iterate through the items/data in an indexed component using the index set indices.
 
     This should never be constructed directly. Instead, it should be extended.
@@ -101,7 +101,7 @@ class IndexedComponent(ORComponent):
 
     def _getitem_when_not_present(self, index: Union[str, tuple]):
         """Method to retrieve the value of an item in the indexed component when the index does not exist.
-        Here, it raises a value error, but in subclasses, this method is overriden to take the default value
+        Here, it raises a value error, but in subclasses, this method is overridden to take the default value
         of a component.
 
         Args:

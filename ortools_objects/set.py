@@ -12,7 +12,7 @@ class ORSet(ORComponent):
         doc (str): Doc string of the set for string representation
         initialize (list): Initial values of the set in list form
 
-    Example use: I have a constraint and need to create for a bunch of distribution sites. I need a number of items producted per site, a parameter of minimum products producted
+    Example use: I have a constraint and need to create for a bunch of distribution sites. I need a number of items produced per site, a parameter of minimum products produced
      per site, a constraint linking variable items to minimum items produced, and a set of distribution sites
     to use for Indexed sites. Note that all other components depend on this set.
 

@@ -22,7 +22,7 @@ class IndexedORBoolVariable(IndexedComponent):
         doc (str): A doc string that can be used in the string representation of the constraint
         name (str): The name of the constraint that will be used to name the dictionary entries
         log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
-        log_solution (bool, Optional): Boolean indicating if solution of variable shoule be sent to log. Defaults to False.
+        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to False.
 
 
     Example use: I want to have an indicator variable for whether or not a site is being used. First, I need a set of sites (set.py):
@@ -222,7 +222,7 @@ class IndexedORContinuousVariable(IndexedComponent):
         lower_bounds (dict(str|tuple: Number), Optional): Dictionary containing key: value with custom lower bounds. Defaults to lb_default.
         upper_bounds (dict(str|tuple: Number), Optional): Dictionary containing key: value with custom upper bounds. Defaults to ub_default.
         log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
-        log_solution (bool, Optional): Boolean indicating if solution of variable shoule be sent to log. Defaults to True.
+        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to True.
 
 
     Example use: I want to have a variable representing the suction pressure of a pump at a given site. First, I need a set of sites (set.py):
@@ -392,7 +392,7 @@ class ScalarORContinuousVariable(ORComponent):
         name (str): The name of the constraint that will be used to name the dictionary entries
         lower_bound (Number, Optional): The default lower bound of the variable. Defaults to 0.
         upper_bound (Number, Optional): The default upper bound of the variable. Defaults to infinity.
-        log_solution (bool, Optional): Boolean indicating if solution of variable shoule be sent to log. Defaults to True.
+        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to True.
 
 
     Example use: I want to create a single variable representing final pressure of a pipeline. I can do so using

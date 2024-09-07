@@ -158,7 +158,7 @@ if __name__ == "__main__":
     sim_params = SimulationParameters(num_days, num_simulations, decision_rolling_period)
     supply_chain_data = construct_supply_chain_data(mean_demand, mfg_site_capacity, std_dev_demand, distribution_opening_costs, transport_cost_m_to_d, transport_cost_d_to_c)
     
-    # Consruct and run optimizer
+    # Construct and run optimizer
     num_distribution_sites = len(distribution_opening_costs)
     total_open_distribution_costs, total_cost, open_distribution_decisions = optimize(supply_chain_data, sim_params, num_distribution_sites)
     

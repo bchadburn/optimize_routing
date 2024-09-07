@@ -18,23 +18,6 @@ class IndexedORStandardConst(IndexedComponent):
         rule (Callable): A callable function that takes in a "model" (ORToolsCPModel), along with the indices (string args) for which the rule should be created as separate arguments.
         log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
 
-    Example Use: Let's say that we want to define the example example2 of a site during a given time period as the example2 example2 of the sit plus the deltap
-    of the site if it is available. First, we want to have the variable objects defined. Next, we want to define a constraint Callable function that takes
-    in the model (with its time period and site), as well as any indices that we want to create the constraint for (here, time period and site):
-
-    def example_definition(model, time_period, site):
-        if (time_period, site) in model.v_station_deltap:
-            return (
-                model.v_example[time_period, site]
-                == model.v_example2[time_period, site]
-                + model.v_station_deltap[time_period, site]
-            )
-        else:
-            return (
-                model.v_example[time_period, site]
-                == model.v_example2_example2[time_period, site]
-            )
-
     Once we have the callable function, we can create a IndexedORConstraint object. Since the constraint is indexed over time period and site, we want to pass
     in these arguments as ORSet objects:
 
@@ -45,10 +28,10 @@ class IndexedORStandardConst(IndexedComponent):
     model.example_constraint = IndexedORStandardConst(model.time_set, model.site_set, name='example', doc='example', rule=example_definition)
 
     When model.construct_model() is called, the construct method of model.example_constraint will be called, which will create a dictionary in the format:
-    {(time_index, site_index): mathop.Variable} for each combination of time period and site indices.
+    {(time_index, site_index): mathopt.Variable} for each combination of time period and site indices.
 
 
-    In the above function, the indexed set allows the constraint to sum over unevent numbers of piecewise indices for different sets. It should be noted that
+    In the above function, the indexed set allows the constraint to sum over an event numbers of piecewise indices for different sets. It should be noted that
     there are other ways to accomplish this, but the the indexed set makes summations like this easier to write and comprehend.
     """
 
@@ -193,7 +176,7 @@ class ScalarORStandardConst(ORComponent):
 
         Args:
             model_wrapper (ORToolsCPModel): Full mode object with all constraints, variables, parameters, and objective
-            logger (logging.Logger, optional): Optional loggger. Defaults to None.
+            logger (logging.Logger, optional): Optional logger. Defaults to None.
         """
         if logger:
             logger.info(f"Added scalar constraint {self._name} to model")

@@ -33,7 +33,7 @@ class ORToolsCPModel:
         empty attributes and sets/parameters imported from the data model.
 
         Kwargs:
-            solver (str, Optional): Solver to use. Defaults to MathOptSolver.
+            solver (str, Optional): Solver to use. Current solver is HiGHS.
             max_time (Number, Optional): Time limit of solver in sections. Defaults to 30.
             rel_gap (Number, Optional): Gap for MIP that is allowed. Defaults to 0.01 (1%).
             log (bool, Optional): Declares whether or not to print detailed log. Defaults to True.
@@ -60,7 +60,7 @@ class ORToolsCPModel:
 
     def __getattr__(self, component_name: str) -> Any:
         """Takes in a component type with some arguments. If the component name is valid (in the factor),
-        then it returns a Componentdecorator object, taking the component reference as an argument,
+        then it returns a Component decorator object, taking the component reference as an argument,
         that can be used to add the component to the model."""
         from ortools_objects.component_factory import ComponentFactory
         
@@ -163,7 +163,7 @@ class ORToolsCPModel:
             else:
                 if self.logger:
                     self.logger.warning(
-                        "Feasible solution not found. Check model LP file for possible infeasibilities or run with slack variables on."
+                        "Feasible solution not found. Check model LP file for possible infeasibility or run with slack variables on."
                     )
                 return None
         else:

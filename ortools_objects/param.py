@@ -8,30 +8,41 @@ from ortools_objects.indexed_component import IndexedComponent
 
 
 class IndexedORParam(IndexedComponent):
-    """Indexed parameter object for an ORTools model.
+    """
+    An indexed parameter object for an ORTools optimization model.
+    This class represents a parameter whose values are indexed over one or more sets. 
+    Indexed parameters are useful for storing data or values that vary across different 
+    combinations of set elements. They can be used in constraints, objective functions, and other model components.
 
     Args:
-        A number of ORSet objects that will be crossed together in IndexedComponent init dunder to create the index set.
+        *sets: One or more ORSet objects that will be used to create the index set for the parameter.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the parameter
-        name (str): The name of the parameter that will be used to name the dictionary entries
-        initialize (dict): Dictionary with indices as the keys and values of the param as values
-        default (Number, Optional): Default value of the parameter for missing indices. Defaults to 0.
+        doc (str): A documentation string providing a description of the parameter.
+        name (str): The name of the parameter, which will be used as the dictionary key for accessing its values.
+        initialize (dict): A dictionary containing the initial values of the parameter, where the keys are the index 
+        combinations and the values are the corresponding parameter values.
+        default (Number, optional): The default value to be used for any missing index combinations. Defaults to 0.
 
-    Example use: I have minimum items produced for given distribution sites. I want constraints in the model to be able to access this without
-    directly needed to access shifting model architectures. I can create, first, a set of distribution sites.
+    Example:
+        Suppose you have a set of distribution sites, and you want to store the minimum number of items that must be 
+        produced at each site. First, create the set of distribution sites:
 
-    model.s_distribution_sites = ORSet(name='distribution_sites',doc='foo',initialize=['site0', 'site1', 'site2', ...])
+        model.s_distribution_sites = ORSet(name='distribution_sites', doc='Set of distribution sites', initialize=['site0', 'site1', 'site2'])
 
-    Now that I have a set of distribution sites, I want to store in the model the minimum items produced:
+        Then, create an indexed parameter to store the minimum production values:
 
-    model.p_minimum_items_produced = IndexedORParam(model.s_distribution_sites, name='foo', doc='foo', initialize={'site0': 50, 'site1': 10, 'site2': 5})
+        model.p_minimum_items_produced = IndexedORParam(
+            model.s_distribution_sites,
+            name='minimum_items_produced',
+            doc='Minimum number of items to be produced at each distribution site',
+            initialize={'site0': 50, 'site1': 10, 'site2': 5}
+        )
 
-    Now that it is a part of the model structure, I can use it in constraint rules (see constraint objects for more details):
+        You can now use this indexed parameter in constraints or other model components:
 
-    def example_constraint(model, site):
-        model.v_items_produced[site] >= model.p_minimum_items_produced[site]
+        def production_constraint(model, site):
+            return model.v_items_produced[site] >= model.p_minimum_items_produced[site]
     """
 
     def __init__(self, *args, **kwds):
@@ -98,22 +109,32 @@ class IndexedORParam(IndexedComponent):
 
 
 class ScalarORParam(ORComponent):
-    """Scalar OR parameter containing a single value
+    """
+    A scalar parameter object for an ORTools optimization model.
+    This class represents a parameter that holds a single, scalar value. 
+    Scalar parameters are useful for storing constant values that are used throughout the model, 
+    such as costs, penalties, or other fixed parameters.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the parameter
-        name (str): The name of the parameter.
-        initialize (Number, Optional): Value of the scalar parameter
+        doc (str): A documentation string providing a description of the parameter.
+        name (str): The name of the parameter, which will be used to access its value.
+        initialize (Number, optional): The initial value of the scalar parameter.
 
-    Example use: Let's say that the cost for some component of my objective is fixed per unit  (e.g. $15/product). I could store
-    this single value in a parameter such that is accessible from a callable used in a constraint:
+    Example:
+        Suppose you want to model the cost per unit of a product, which is a fixed value of $10. You can create a scalar parameter to store this value:
 
-    model.p_cost_of_unit = ScalarORParam(name='foo', doc='foo', initialize=17)
+        model.p_cost_per_unit = ScalarORParam(
+            name='cost_per_unit',
+            doc='Cost per unit of the product',
+            initialize=10
+        )
 
-    Now, it is possible to use the cost of unit in any constraint if so desired. Most likely, this would be used in an objective function callable:
+        You can then use this scalar parameter in constraints, objective functions, or other model components:
 
-    def objective_function(model):
-        return model.p_cost_of_unit * sum(v_use[index] for index in model.set)
+        def objective_function(model):
+            return model.p_cost_per_unit * sum(model.v_units_produced[index] for index in model.s_products)
+
+        In this example, the objective function calculates the total cost by multiplying the cost per unit (`model.p_cost_per_unit`) by the sum of units produced for each product (`model.v_units_produced`).
     """
 
     def __init__(self, *args, **kwds):

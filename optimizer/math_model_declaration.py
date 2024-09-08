@@ -51,13 +51,17 @@ def _add_base_model_parameters(
 ) -> None:
     
     """
-    Add fixed values for the optimization process. They can be scalers, but are more often indexed over sets. 
-    To achieve this, we create the sets first and then assign values to all instances within those sets. 
+    Adds fixed parameter values to the ORTools optimization model. This function is responsible for adding fixed parameter 
+    values to the ORTools model. These parameters can be scalar values or indexed over one or more sets. To handle indexed parameters, 
+    the function first creates the necessary sets and then assigns values to all instances within those sets.
 
     Args:
-        model (ORToolsCPModel): Model object to which parameters should be added.
-        schedule_list_dict (List[Dict]): List of dictionaries (one for each time period) with data about each period
-        supply_chain_data (SupplyChainData): Supply chain data such as distribution, manufacturing, and customer data
+        model (ORToolsCPModel): The ORTools model object to which the parameters should be added.
+        supply_chain_data (SupplyChainData): An object containing supply chain data, such as information about distribution, manufacturing, and customers.
+        sim_params (SimulationParameters): An object containing simulation parameters for the optimization problem.
+
+    Returns:
+        None
     """
     # Create parameters
     model.p_manufacturing_site_capacity = IndexedORParam(model.s_manufacturing_sites, name="p_manufacturing_site_capacity",

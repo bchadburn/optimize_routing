@@ -11,28 +11,39 @@ from ortools_objects.model import ORToolsCPModel
 
 
 class IndexedORBoolVariable(IndexedComponent):
-    """Indexed boolean variable object for an ORTools model.
-
+    """
+    An indexed boolean variable object for an ORTools optimization model.
+    This class represents a collection of binary (0 or 1) decision variables indexed over one or more sets. 
+    Indexed boolean variables are commonly used in optimization models to represent binary decisions, such as whether a 
+    facility is open or closed, whether a task is performed or not, or whether a constraint is satisfied or violated.
 
     Args:
-        A number of ORSet objects that will be crossed together in IndexedComponent init dunder to create the index set.
-
+        *sets: One or more ORSet objects that will be used to create the index set for the boolean variables.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-        log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
-        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to False.
+        doc (str): A documentation string providing a description of the boolean variables.
+        name (str): The name of the boolean variables, which will be used as the dictionary key for accessing their values.
+        log_cardinality (bool, optional): A boolean indicating whether the cardinality (number of variables) should be logged. Defaults to True.
+        log_solution (bool, optional): A boolean indicating whether the solution values of the variables should be logged. Defaults to False.
 
+    Example:
+        Suppose you have a set of distribution sites, and you want to create a binary variable for each site to indicate whether the site is active or not. First, create the set of sites:
 
-    Example use: I want to have an indicator variable for whether or not a site is being used. First, I need a set of sites (set.py):
+        model.s_distribution_sites = ORSet(
+            name='distribution_sites',
+            doc='Set of distribution sites',
+            initialize=['site0', 'site1', 'site2', 'site3']
+        )
 
+        Then, create an indexed boolean variable over the set of sites:
 
-    model.s_sites = ORSet(name='foo', doc='foo', initialize=['site0', 'site1', 'site2', ...])
+        model.bv_site_active = IndexedORBoolVariable(
+            model.s_distribution_sites,
+            name='site_active',
+            doc='Binary variable indicating whether a distribution site is active'
+        )
 
-
-    I can now create a binary variable for each site:
-    model.bv_site_active = IndexedORBoolVariable(model.s_sites, name='foo', doc='foo')
+        You can now use this indexed boolean variable in constraints or other model components to represent the decision of whether each site should be active or not.
     """
 
 
@@ -56,13 +67,16 @@ class IndexedORBoolVariable(IndexedComponent):
 
 
     def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger) -> None:
-        """Adds the boolean variable to the mathopt model for each index in the index set of this boolean variable object.
-
+        """
+        Constructs and adds the indexed boolean variables to the given ORTools model.
+        This method creates and adds the boolean variables represented by this object to the provided ORTools model. 
+        The variables are indexed over the index set defined by the sets used to create this object.
 
         Args:
-            model_wrapper (ORToolsCPModel): Model to which the boolean variables should be added
-            logger (logging.Logger): Logger object for math model
+            model_wrapper (ORToolsCPModel): The ORTools model to which the boolean variables should be added.
+            logger (logging.Logger): A logger object used for logging information about the model construction process.
         """
+        
         if logger:
             logger.debug(f"Began adding variable {self._name} to model")
         original_vars = len(list(model_wrapper.mathopt_model.variables()))
@@ -124,22 +138,28 @@ class IndexedORBoolVariable(IndexedComponent):
 
 
 class ScalarORBoolVariable(ORComponent):
-    """Creates a scalar boolean variable to be added to a model.
+    """
+    A scalar boolean variable object for an ORTools optimization model.
 
+    This class represents a single binary (0 or 1) decision variable. Scalar boolean variables are useful for representing 
+    binary decisions that are not indexed over any set, such as whether to perform a specific action or not.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
+        doc (str): A documentation string providing a description of the boolean variable.
+        name (str): The name of the boolean variable, which will be used to access its value.
 
+    Example:
+        Suppose you have a supply chain optimization problem, and you want to create a boolean variable to represent the 
+        decision of whether to build a new distribution center or not. You can create a scalar boolean variable as follows:
 
-    Example use: I want a single boolean variable indicating whether a single site should be added to
-    a pipeline or not. I can directly create a variable:
+        model.bv_build_new_center = ScalarORBoolVariable(
+            name='build_new_center',
+            doc='Binary variable indicating whether to build a new distribution center'
+        )
 
-
-    model.bv_create_pump_site = ScalarORBoolVar(name='foo', doc='foo')
+        You can then use this scalar boolean variable in constraints or other model components to represent the decision of building the new distribution center or not.
     """
-
-
+    
     def __init__(self, **kwds):
         kwds.setdefault("ctype", "var")
         self._solved = False
@@ -205,45 +225,46 @@ class ScalarORBoolVariable(ORComponent):
 
 
 
-
 class IndexedORContinuousVariable(IndexedComponent):
-    """Indexed boolean variable object for an ORTools model.
-
+    """    
+    An indexed continuous variable object for an ORTools optimization model.
+    This class represents a collection of continuous decision variables indexed over one or more sets. 
+    Indexed continuous variables are commonly used in optimization models to represent quantities, levels, or 
+    other numerical values that can take on any real value within specified bounds.
 
     Args:
-        A number of ORSet objects that will be crossed together in IndexedComponent init dunder to create the index set.
-
+        *sets: One or more ORSet objects that will be used to create the index set for the continuous variables.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-        lb_default (Number, Optional): The default lower bound of the variable. Defaults to 0.
-        ub_default (Number, Optional): The default upper bound of the variable. Defaults to infinity.
-        lower_bounds (dict(str|tuple: Number), Optional): Dictionary containing key: value with custom lower bounds. Defaults to lb_default.
-        upper_bounds (dict(str|tuple: Number), Optional): Dictionary containing key: value with custom upper bounds. Defaults to ub_default.
-        log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
-        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to True.
+        doc (str): A documentation string providing a description of the continuous variables.
+        name (str): The name of the continuous variables, which will be used as the dictionary key for accessing their values.
+        lb_default (Number, optional): The default lower bound for the continuous variables. Defaults to 0.
+        ub_default (Number, optional): The default upper bound for the continuous variables. Defaults to positive infinity.
+        lower_bounds (dict, optional): A dictionary containing custom lower bounds for specific index combinations, where the keys are the index tuples, and the values are the corresponding lower bounds.
+        upper_bounds (dict, optional): A dictionary containing custom upper bounds for specific index combinations, where the keys are the index tuples, and the values are the corresponding upper bounds.
+        log_cardinality (bool, optional): A boolean indicating whether the cardinality (number of variables) should be logged. Defaults to True.
+        log_solution (bool, optional): A boolean indicating whether the solution values of the variables should be logged. Defaults to True.
 
+    Example:
+        Suppose you have a set of distribution sites, and you want to create a continuous variable for each site representing the suction pressure of a pump. First, create the set of sites:
 
-    Example use: I want to have a variable representing the suction pressure of a pump at a given site. First, I need a set of sites (set.py):
+        model.s_distribution_sites = ORSet(
+            name='distribution_sites',
+            doc='Set of distribution sites',
+            initialize=['site0', 'site1', 'site2', 'site3']
+        )
 
+        Then, create an indexed continuous variable over the set of sites:
 
-    model.s_sites = ORSet(name='foo', doc='foo', initialize=['site0', 'site1', 'site2', ...])
+        model.v_suction_pressure = IndexedORContinuousVariable(
+            model.s_distribution_sites,
+            name='suction_pressure',
+            doc='Suction pressure of the pump at each distribution site',
+            lb_default=-20,
+            lower_bounds={'site1': -10}
+        )
 
-
-    I can now create a continuous variable for each site. At a basic level:
-    model.v_suction_pressure = IndexedORBoolVariable(model.s_sites, name='foo', doc='foo')
-
-
-    However, what if I want custom lower and upper bounds? One can add a lower bound/upper bound dictionary:
-    example_lb = {'site1': -10}
-
-
-    model.v_suction_pressure = IndexedORContinuousVariable(model.s_sites, name='foo', doc='foo', lb_default=-20, lower_bounds=example_lb)
-
-
-    This will create a variable with lower bounds of -20 for all sites except for site1, which will have a lower bound of -10.
-    The same logic can be applied to upper bounds with ub_default and upper_bounds.
+        In this example, the lower bound for the suction pressure variable is -20 for all sites except 'site1', which has a lower bound of -10.
     """
 
 
@@ -303,7 +324,6 @@ class IndexedORContinuousVariable(IndexedComponent):
 
     def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger) -> None:
         """Add the variable to the model
-
 
         Args:
             model_wrapper (ORToolsCPModel): The model to which the variable should be added.
@@ -384,25 +404,29 @@ class IndexedORContinuousVariable(IndexedComponent):
 
 
 class ScalarORContinuousVariable(ORComponent):
-    """Scalar continuous variable to be added to the model.
+    """
+    A scalar continuous variable object for an ORTools optimization model.
 
+    This class represents a single continuous decision variable that is not indexed over any set. Scalar continuous variables are useful for representing quantities, levels, or other numerical values that are not specific to any particular combination of set elements.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-        lower_bound (Number, Optional): The default lower bound of the variable. Defaults to 0.
-        upper_bound (Number, Optional): The default upper bound of the variable. Defaults to infinity.
-        log_solution (bool, Optional): Boolean indicating if solution of variable should be sent to log. Defaults to True.
+        doc (str): A documentation string providing a description of the continuous variable.
+        name (str): The name of the continuous variable, which will be used to access its value.
+        lower_bound (Number, optional): The lower bound for the continuous variable. Defaults to 0.
+        upper_bound (Number, optional): The upper bound for the continuous variable. Defaults to positive infinity.
+        log_solution (bool, optional): A boolean indicating whether the solution value of the variable should be logged. Defaults to True.
 
+    Example:
+        Suppose you have a supply chain optimization problem, and you want to create a continuous variable representing the final pressure of a pipeline. You can create a scalar continuous variable as follows:
 
-    Example use: I want to create a single variable representing final pressure of a pipeline. I can do so using
-    a scalar variable:
+        model.v_final_pressure = ScalarORContinuousVariable(
+            name='final_pressure',
+            doc='Final pressure of the pipeline',
+            lower_bound=10,
+            upper_bound=500
+        )
 
-
-    model.v_final_pressure = ScalarORContinuousVariable(name='foo', doc='foo', lower_bound=-10, upper_bound=500)
-
-
-    If no lower or upper bound is provided, model will assume 0 to infinity range.
+        In this example, the final pressure variable is constrained to be between 10 and 500 units. If no lower or upper bound is provided, the variable will be bounded between 0 and positive infinity by default.
     """
 
 
@@ -440,7 +464,6 @@ class ScalarORContinuousVariable(ORComponent):
 
     def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger):
         """Adds the variable to the model
-
 
         Args:
             model_wrapper (ORToolsCPModel): The model to which the variable is added

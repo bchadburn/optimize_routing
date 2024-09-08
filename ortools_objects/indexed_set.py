@@ -2,30 +2,39 @@ from ortools_objects.indexed_component import IndexedComponent
 
 
 class IndexedORSet(IndexedComponent):
-    """Mainly used by constraints to iterate over certain portions of sets for certain indices. Should
-    not be used as an indexed component initializer (which will throw an error).
+    """
+    An indexed set object for an ORTools optimization model.
+
+    This class represents a set whose elements are indexed over one or more other sets. Indexed sets are primarily used in constraints to iterate over specific portions of sets for certain index combinations. They should not be used as initializers for indexed components, as this will raise an error.
 
     Args:
-        Number of ORSets for which the set should be indexed.
+        *sets: One or more ORSet objects that will be used to create the index set for the indexed set.
 
     Kwargs:
-        name (str): Name of the set
-        doc (str): Docstring of the set
-        initialize (dict): Dictionary with keys of index set and values of set.
+        name (str): A descriptive name for the indexed set.
+        doc (str): A documentation string providing additional details about the indexed set.
+        initialize (dict): A dictionary containing the initial elements of the indexed set, where the keys are the index tuples, and the values are lists or sets of elements.
 
-    Example Use: In preprocessing, a series of piecewise segments are generated for each site and time period
-    in a set of sites and time periods. However, the number of piecewise segments for each site/time period
-    is different. To sum over all piecewise segments for a given site/time period, the developer will want to
-    have an implicit summation. This can be accomplished through the following:
+    Example:
+        Suppose you have a set of sites and a set of time periods, and during preprocessing, you generate a series of piecewise segments for each site and time period combination. However, the number of piecewise segments may vary for different site/time period combinations. To sum over all piecewise segments for a given site and time period in a constraint, you can use an indexed set as follows:
 
-    model.example_set = IndexedORSet(name="foo", doc="foo", initialize={(0, 'site1'): [0, 1, 2], (0, 'site2'): [0, 1]})
+        model.s_sites = ORSet(name='sites', initialize=['site1', 'site2', 'site3'])
+        model.s_time_periods = ORSet(name='time_periods', initialize=[0, 1, 2])
 
-    def example_rule(model, time_period, site):
-        return v_ActualProdProduced[time_period, site] == sum(v_PiecewiseProducts[time_period, site, piecewise_idx] for piecewise_idx in example_set[time_period, site])
+        model.s_piecewise_segments = IndexedORSet(
+            model.s_time_periods, model.s_sites,
+            name='piecewise_segments',
+            doc='Set of piecewise segments for each site and time period',
+            initialize={(0, 'site1'): [0, 1, 2], (0, 'site2'): [0, 1], (1, 'site1'): [0, 1], ...}
+        )
 
-    In the above function, the indexed set allows the constraint to sum over uneven numbers of piecewise indices for different sets. It should be noted that
-    there are other ways to accomplish this, but the the indexed set makes summations like this easier to write and comprehend.
+        def production_constraint(model, time_period, site):
+            return model.v_actual_production[time_period, site] == sum(
+                model.v_piecewise_production[time_period, site, piecewise_idx]
+                for piecewise_idx in model.s_piecewise_segments[time_period, site]
+            )
 
+    In this example, the indexed set `s_piecewise_segments` allows the constraint to sum over the appropriate piecewise segments for each site and time period combination, even though the number of segments may vary.
     """
 
     def __init__(self, *args, **kwds):

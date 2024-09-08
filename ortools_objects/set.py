@@ -5,21 +5,15 @@ from ortools_objects.component import ORComponent
 
 
 class ORSet(ORComponent):
-    """Set object upon which all indexed components of the math model are based.
+    """
+    A set object representing a collection of elements in an ORTools optimization model.
+    Sets define the index sets over which other components, such as parameters, variables, and constraints, are defined. 
+    This class provides a way to create and manage sets within the model.
 
     Kwargs:
-        name (str): Name of the set for string representation
-        doc (str): Doc string of the set for string representation
-        initialize (list): Initial values of the set in list form
-
-    Example use: I have a constraint and need to create for a bunch of distribution sites. I need a number of items produced per site, a parameter of minimum products produced
-     per site, a constraint linking variable items to minimum items produced, and a set of distribution sites
-    to use for Indexed sites. Note that all other components depend on this set.
-
-    model.s_distribution_sites = ORSet(name='foo', doc='foo', initialize=['site0', 'site1', 'site2', ...])
-
-    Now that the set is created, I can use it to create an indexed parameter (see param.py), indexed constraint (see constraint.py),
-    and all other model components.
+        name (str): A descriptive name for the set, used for string representation.
+        doc (str): A documentation string providing additional details about the set.
+        initialize (list): A list containing the initial elements of the set.
     """
 
     def __init__(self, *args, **kwds):
@@ -43,14 +37,30 @@ class ORSet(ORComponent):
         return self._data[idx]
 
     def cross(self, *args) -> list:
-        """Returns a list of tuples containing the product of the current set (self) and any other sets passed to this function.
-        Mainly used by indexed components to generate all possible tuples of a combination of sets, but can be used externally
-        for other purposes (debugging, etc)
+        """
+        Computes the Cartesian product of the current set with one or more other sets.
+
+        This method generates a list of tuples representing all possible combinations of elements from the current set and the sets provided as arguments. The Cartesian product is a fundamental operation in set theory and is commonly used in optimization models to create index sets for indexed components.
+
+        Args:
+            *args: One or more ORSet objects to be combined with the current set.
 
         Returns:
-            list: List of tuples containing the product of the current set (self) and any other sets passed to this function.
+            list: A list of tuples, where each tuple contains one element from the current set and one element from each of the provided sets, representing all possible combinations.
+
+        Example:
+            Suppose you have a set of products and a set of distribution sites, and you want to create an indexed parameter that stores the demand for each product at each distribution site. You can use the `cross` method to generate the index set for this parameter:
+
+            model.s_products = ORSet(name='products', initialize=['prod1', 'prod2', 'prod3'])
+            model.s_distribution_sites = ORSet(name='distribution_sites', initialize=['site1', 'site2', 'site3'])
+
+            index_set = model.s_products.cross(model.s_distribution_sites)
+            # index_set = [('prod1', 'site1'), ('prod1', 'site2'), ('prod1', 'site3'), ('prod2', 'site1'), ...]
+
+            model.p_demand = IndexedORParam(index_set, name='demand', ...)
+
+            In this example, the `index_set` contains all possible combinations of products and distribution sites, which can be used to define the indexed parameter `p_demand`.
         """
-        
         
         from itertools import product
 

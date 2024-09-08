@@ -5,7 +5,7 @@ from ortools_objects.set import ORSet
 
 
 def process_set(arg):
-    """Takes in any arg and makes sure that it is an ORSet. If not, raise an error."""
+    """Returns error if any arg is not an ORSet"""
     if isinstance(arg, ORSet):
         return arg
     else:
@@ -15,17 +15,21 @@ def process_set(arg):
 
 
 class IndexedComponent(ORComponent):
-    """Extends the base ORComponent object to allow for indices. All indexed parameter, set, and variable objects extend this one, while
-    scalar objects extend the base component class directly. The way this is meant to work is to provide any number of sets as the argument array,
-    and to provide other arguments (name, doc, etc.) as kwds.
-
-    All indexed components contain a dictionary as their data attribute with indices as the keys in the form of a single element or tuple, and a value as the key.
-
-    The increased complexity comes from the _index_set attribute. If there are no arguments, the index set should not exist. If there is 1 argument, the
-    init dunder will make sure the arg is a set and assign it as the index set. Because index sets have a getitem dunder, it is then accessible via index.
-    In addition, for sets, since the dunder for iter is defined, you can iterate through the items/data in an indexed component using the index set indices.
-
-    This should never be constructed directly. Instead, it should be extended.
+    """
+    Extends the base ORComponent object to allow for indices. All indexed parameter, set, and variable objects extend this class, 
+    while scalar objects extend the base component class directly. The way this is meant to work is to provide any number of sets 
+    as the argument array, and to provide other arguments (name, doc, etc.) as keyword arguments.
+    
+    All indexed components contain a dictionary as their data attribute, with indices as the keys in the form of a single element 
+    or tuple, and the component's value as the value. The increased complexity comes from the _index_set attribute. 
+    If there are no arguments, the index set should not exist. 
+    If there is one argument, the __init__ method will ensure that the argument is a set and assign it as the index set. 
+    
+    Because index sets have a __getitem__ method, it is then accessible via indexing. In addition, for sets, since the __iter__ 
+    method is defined, you can iterate through the items/data in an indexed component using the index set indices.
+    
+    This class should never be constructed directly. Instead, it should be extended by other classes representing specific 
+    types of indexed components.
     """
 
     def __init__(self, *args, **kwds):

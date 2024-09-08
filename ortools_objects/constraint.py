@@ -7,33 +7,44 @@ from ortools_objects.model import ORToolsCPModel
 
 
 class IndexedORStandardConst(IndexedComponent):
-    """Indexed standard constraint. Takes in several args and kwargs and creates a constraint using a callable function.
+    """
+    An indexed standard constraint for an ORTools optimization model.
+    This class represents a constraint that is defined over one or more sets. It takes a callable function (rule) that defines the 
+    constraint expression, along with the sets over which the constraint should be indexed.
 
     Args:
-        A number of ORSet objects that will be crossed together in IndexedComponent init dunder to create the index set.
+        *sets: One or more ORSet objects that will be used to create the index set for the constraint.
 
     Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-        rule (Callable): A callable function that takes in a "model" (ORToolsCPModel), along with the indices (string args) for which the rule should be created as separate arguments.
-        log_cardinality (bool, Optional): Boolean indicating if cardinality of variable should be sent to log. Defaults to True.
+        doc (str): A documentation string providing a description of the constraint.
+        name (str): The name of the constraint, which will be used as the dictionary key for accessing its values.
+        rule (callable): A callable function that takes the ORTools model and the index values as arguments, and returns the constraint expression.
+        log_cardinality (bool, optional): A boolean indicating whether the cardinality (number of constraints) should be logged. Defaults to True.
 
-    Once we have the callable function, we can create a IndexedORConstraint object. Since the constraint is indexed over time period and site, we want to pass
-    in these arguments as ORSet objects:
+    Example:
+        Suppose you have a set of time periods and a set of distribution sites, and you want to create a constraint that ensures the actual 
+        production at each site and time period is equal to the sum of piecewise productions for that site and time period. 
+        You can define the constraint as follows:
 
-    model.time_set = ORSet(name='time_index', doc='time_index', initialize=[0, 1,...])
-    model.site_set = ORSet(name='site_index', doc='site_index', initialize=['site0', 'site1', ...])
+        model.s_time_periods = ORSet(name='time_periods', initialize=[0, 1, 2, ...])
+        model.s_distribution_sites = ORSet(name='distribution_sites', initialize=['site1', 'site2', 'site3', ...])
 
-    Now, we can create our constraint object:
-    model.example_constraint = IndexedORStandardConst(model.time_set, model.site_set, name='example', doc='example', rule=example_definition)
+        def production_constraint(model, time_period, site):
+            return model.v_actual_production[time_period, site] == sum(
+                model.v_piecewise_production[time_period, site, piecewise_idx]
+                for piecewise_idx in model.s_piecewise_segments[time_period, site]
+            )
 
-    When model.construct_model() is called, the construct method of model.example_constraint will be called, which will create a dictionary in the format:
-    {(time_index, site_index): mathopt.Variable} for each combination of time period and site indices.
+        model.c_production = IndexedORStandardConst(
+            model.s_time_periods, model.s_distribution_sites,
+            name='production_constraint',
+            doc='Constraint ensuring actual production equals sum of piecewise productions',
+            rule=production_constraint
+        )
 
-
-    In the above function, the indexed set allows the constraint to sum over an event numbers of piecewise indices for different sets. It should be noted that
-    there are other ways to accomplish this, but the the indexed set makes summations like this easier to write and comprehend.
+    In this example, the `production_constraint` function defines the constraint expression, and the `IndexedORStandardConst` object creates an indexed constraint over the sets of time periods and distribution sites, using the provided rule.
     """
+
 
     def __init__(
         self,

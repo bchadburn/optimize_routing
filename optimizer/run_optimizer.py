@@ -1,5 +1,3 @@
-from typing import List, Union
-
 from ortools.math_opt.python import mathopt
 
 import utils.log as log
@@ -8,7 +6,7 @@ from optimizer.math_model_declaration import create_math_model
 from ortools_objects.model import ORToolsCPModel
 
 
-def calculate_transport_costs(model: ORToolsCPModel) -> List[float]:
+def calculate_transport_costs(model: ORToolsCPModel) -> tuple[float, float]:
     # Calculate transportation costs
     total_transport_cost_m_to_d = sum([model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m]
                             for d in model.s_distribution_sites()
@@ -29,43 +27,142 @@ def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
     return total_open_distribution_costs
  
 
-def construct_supply_chain_data(mean_demand: list, mfg_site_capacity: list, std_dev_demand: list, distribution_opening_costs: list, transport_cost_m_to_d: list, transport_cost_d_to_c: list) -> SupplyChainData:
-    # Create class to organize supply chain data
-    
+def construct_supply_chain_data(
+    mean_demand: list[float],
+    mfg_site_capacity: list[float],
+    std_dev_demand: list[float],
+    distribution_opening_costs: list[float],
+    transport_cost_m_to_d: list[list[float]],
+    transport_cost_d_to_c: list[list[float]]
+) -> SupplyChainData:
+    """
+    Construct a SupplyChainData object from the given supply chain parameters.
+
+    Args:
+        mean_demand (list[float]): A list of mean demands for each customer.
+        mfg_site_capacity (list[float]): A list of capacities for each manufacturing site.
+        std_dev_demand (list[float]): A list of standard deviations of demand for each customer.
+        distribution_opening_costs (list[float]): A list of opening costs for each distribution site.
+        transport_cost_m_to_d (list[list[float]]): A 2D list representing the transportation costs from manufacturing sites to distribution sites.
+        transport_cost_d_to_c (list[list[float]]): A 2D list representing the transportation costs from distribution sites to customers.
+
+    Returns:
+        SupplyChainData: A SupplyChainData object containing the supply chain data.
+    """
     num_customers = len(mean_demand)
     num_manufacturing_sites = len(mfg_site_capacity)
     num_distribution_sites = len(distribution_opening_costs)
-    
-    supply_chain_data = SupplyChainData()
-    
-    # Adding manufacturing sites. Simply assigning ids based on idx
-    mf_ids = [mf_id for mf_id in range(num_manufacturing_sites)]
-    for dist_id in mf_ids:
-        supply_chain_data.add_manufacturing_site(site_id=dist_id, capacity=mfg_site_capacity[dist_id])
 
-    # Adding distribution sites
-    dist_ids = [dist_ids for dist_ids in range(num_distribution_sites)]
-    for dist_id in dist_ids:   
-        supply_chain_data.add_distribution_site(site_id=dist_id, opening_cost=distribution_opening_costs[dist_id])
+    validate_input_lengths(num_customers, num_manufacturing_sites, num_distribution_sites, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c)
 
-    # Adding customers
-    cust_ids = [cust_id for cust_id in range(num_customers)]
+    supply_chain_data = SupplyChainData(num_customers, num_distribution_sites, num_manufacturing_sites)
+    customer_ids = [customer_id for customer_id in supply_chain_data.customers]
+
+    add_manufacturing_sites(supply_chain_data, mfg_site_capacity)
+    add_distribution_sites(supply_chain_data, distribution_opening_costs)
+    add_customers(supply_chain_data, customer_ids, mean_demand, std_dev_demand)
+    set_transport_costs(supply_chain_data, transport_cost_m_to_d, transport_cost_d_to_c)
+
+    return supply_chain_data
+
+def validate_input_lengths(
+    num_customers: int,
+    num_manufacturing_sites: int,
+    num_distribution_sites: int,
+    std_dev_demand: list[float],
+    transport_cost_m_to_d: list[list[float]],
+    transport_cost_d_to_c: list[list[float]]
+) -> None:    
+    """
+    Validate the lengths of the input lists to ensure they match the expected dimensions.
+
+    Args:
+        num_customers (int): The number of customers.
+        num_manufacturing_sites (int): The number of manufacturing sites.
+        num_distribution_sites (int): The number of distribution sites.
+        std_dev_demand (list[float]): A list of standard deviations of demand for each customer.
+        transport_cost_m_to_d (list[list[float]]): A 2D list representing the transportation costs from manufacturing sites to distribution sites.
+        transport_cost_d_to_c (list[list[float]]): A 2D list representing the transportation costs from distribution sites to customers.
+
+    Raises:
+        ValueError: If any of the input lists have an incorrect length.
+    """
+    if len(std_dev_demand) != num_customers:
+        raise ValueError("Length of std_dev_demand does not match the number of customers.")
+
+    if len(transport_cost_m_to_d) != num_manufacturing_sites or any(len(row) != num_distribution_sites for row in transport_cost_m_to_d):
+        raise ValueError("Incorrect dimensions for transport_cost_m_to_d.")
+
+    if len(transport_cost_d_to_c) != num_distribution_sites or any(len(row) != num_customers for row in transport_cost_d_to_c):
+        raise ValueError("Incorrect dimensions for transport_cost_d_to_c.")
+
+def add_manufacturing_sites(supply_chain_data: SupplyChainData, mfg_site_capacity: list[float]) -> None:
+    """
+    Add manufacturing sites to the SupplyChainData object.
+
+    Args:
+        supply_chain_data (SupplyChainData): The SupplyChainData object to add manufacturing sites to.
+        mfg_site_capacity (list[float]): A list of capacities for each manufacturing site.
+    """
+    for site_id, capacity in enumerate(mfg_site_capacity):
+        supply_chain_data.add_manufacturing_site(site_id=site_id, capacity=capacity)
+
+def add_distribution_sites(supply_chain_data: SupplyChainData, distribution_opening_costs: list[float]) -> None:
+    """
+    Add distribution sites to the SupplyChainData object.
+
+    Args:
+        supply_chain_data (SupplyChainData): The SupplyChainData object to add distribution sites to.
+        distribution_opening_costs (list[float]): A list of opening costs for each distribution site.
+    """
+    for site_id, opening_cost in enumerate(distribution_opening_costs):
+        supply_chain_data.add_distribution_site(site_id=site_id, opening_cost=opening_cost)
+
+def add_customers(supply_chain_data: SupplyChainData, cust_ids: list[int], mean_demand: list[float], std_dev_demand: list[float]) -> None:
+    """
+    Add customers to the SupplyChainData object.
+
+    Args:
+        supply_chain_data (SupplyChainData): The SupplyChainData object to add customers to.
+        mean_demand (list[float]): A list of mean demands for each customer.
+        std_dev_demand (list[float]): A list of standard deviations of demand for each customer.
+    """
     for customer_id in cust_ids:
         supply_chain_data.add_customer(customer_id=customer_id, mean_demand=mean_demand[customer_id], std_dev_demand=std_dev_demand[customer_id])
 
-    # Set transport costs for manufacturing sites
+
+def set_transport_costs(
+    supply_chain_data: SupplyChainData,
+    transport_cost_m_to_d: list[list[float]],
+    transport_cost_d_to_c: list[list[float]]
+) -> None:
+    """
+    Set the transportation costs for manufacturing sites and distribution sites in the SupplyChainData object.
+
+    Args:
+        supply_chain_data (SupplyChainData): The SupplyChainData object to set transportation costs for.
+        transport_cost_m_to_d (list[list[float]]): A 2D list representing the transportation costs from manufacturing sites to distribution sites.
+        transport_cost_d_to_c (list[list[float]]): A 2D list representing the transportation costs from distribution sites to customers.
+    """
+    num_manufacturing_sites = len(supply_chain_data.manufacturing_sites)
+    num_distribution_sites = len(supply_chain_data.distribution_sites)
+    num_customers = len(supply_chain_data.customers)
+
     for mf_id in range(num_manufacturing_sites):
         for dist_id in range(num_distribution_sites):
             supply_chain_data.manufacturing_sites[mf_id].set_mf_to_dist_transport_costs(dist_id, transport_cost_m_to_d[mf_id][dist_id])
-            
-    # Set transport costs for distribution sites
+
     for dist_id in range(num_distribution_sites):
         for cust_id in range(num_customers):
             supply_chain_data.distribution_sites[dist_id].set_dist_to_cust_transport_costs(cust_id, transport_cost_d_to_c[dist_id][cust_id])
-    return supply_chain_data
 
 
-def optimize(supply_chain_data, sim_params, num_distribution_sites: list, solve_infeasibility: bool=False) -> List[Union[None, list, float]]:
+def optimize(
+    supply_chain_data: SupplyChainData,
+    sim_params: SimulationParameters,
+    num_distribution_sites: list[int],
+    solve_infeasibility: bool = False
+) -> tuple[list[float], float, list[bool]]:
     """Constructs solver """
     logger = log.get_logger("MathOpt Model")
     

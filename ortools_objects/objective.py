@@ -6,24 +6,33 @@ from ortools_objects.model import ORToolsCPModel
 
 
 class ORObjective(ORComponent):
-    """Set object upon which all indexed components of the math model are based.
+    """
+    This class represents the objective function of an optimization model.
+    The objective function is a mathematical expression that defines the quantity 
+    to be minimized or maximized in the optimization problem. This class provides a convenient way to specify the objective function and its associated properties.
 
-    Kwargs:
-        name (str): Name of the set for string representation
-        doc (str): Doc string of the set for string representation
-        rule (Callable): Callable that returns an expression in ORTools, taking in full model object as input
-        sense (str, Optional): Whether the function should be minimized or maximized. Defaults to 'minimize'
+    Args:
+        name (str): A descriptive name for the objective function.
+        doc (str): A documentation string providing additional details about the objective function.
+        rule (Callable): A callable function that takes the model object as input and returns the mathematical expression representing the objective function.
+        sense (str, optional): The optimization direction, either 'minimize' or 'maximize'. Defaults to 'minimize'.
 
-    Example use: I want to charge $1/product for cost optimization. I  have a set of sites in the form of an ORSet object,
-    a variable representing cost use indexed over those sites, and I want to minimize overall cost.
+    Example:
+        Suppose you want to minimize the total cost of products across multiple sites. You have an `ORSet` object representing the sites, 
+        and a variable `v_product_cost` indexed over the sites. You can define the objective function as follows:
 
-    def objective_function(model):
-        return 1 * sum(model.v_product_cost[site] for site in model.s_sites)
+        def objective_function(model):
+            return sum(model.v_product_cost[site] for site in model.s_sites)
 
-    Now that I have my callable function, I can create the objective function object:
-    model.objective = ORObjective(name='objective', doc='objective', rule=objective_function, sense='minimize')
-
-    Note that the attribute name of the ORObjective in the model object must be objective in order for ORToolsCPModel to function correctly.
+        model.objective = ORObjective(
+            name='total_cost',
+            doc='Minimize the total cost of products across all sites',
+            rule=objective_function,
+            sense='minimize'
+        )
+ 
+    Note:
+        The attribute name of the `ORObjective` instance in the model object must be 'objective' for the `ORToolsCPModel` to function correctly.
     """
 
     def __init__(self, *args, **kwds):

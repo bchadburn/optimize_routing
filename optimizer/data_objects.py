@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from numbers import Number
-from typing import Dict
+from typing import ClassVar, Dict, Union
 
 
 @dataclass
@@ -16,7 +16,7 @@ class ManufacturingSite:
     capacity: int
     transport_cost_m_to_d: Dict[int, float] = field(default_factory=dict)
     
-    def set_mf_to_dist_transport_costs(self, dist_id, transport_cost_m_to_d: Number):
+    def set_mf_to_dist_transport_costs(self, dist_id: int, transport_cost_m_to_d: Union[int, float]):
         self.transport_cost_m_to_d[dist_id] = transport_cost_m_to_d
           
         
@@ -57,22 +57,21 @@ class SupplyChainData:
     """
     Container of supply chain data.
     """
+    num_customers: int = 0
+    num_distribution_sites: int = 0
+    num_manufacturing_sites: int = 0
     manufacturing_sites: Dict[int, ManufacturingSite] = field(default_factory=dict)
     distribution_sites: Dict[int, DistributionSite] = field(default_factory=dict)
     customers: Dict[int, 'Customer'] = field(default_factory=dict)
 
-    def add_manufacturing_site(self, site_id: int, capacity: int):
-        self.manufacturing_sites[site_id] = ManufacturingSite(site_id, capacity)
-
-    def add_distribution_site(self, site_id: int, opening_cost: float):
+    def add_distribution_site(self, site_id: int, opening_cost: float) -> None:
         self.distribution_sites[site_id] = DistributionSite(site_id, opening_cost)
 
-    def add_customer(self, customer_id: int, mean_demand: float, std_dev_demand: float):
+    def add_manufacturing_site(self, site_id: int, capacity: int) -> None:
+        self.manufacturing_sites[site_id] = ManufacturingSite(site_id, capacity)
+
+    def add_customer(self, customer_id: int, mean_demand: float, std_dev_demand: float) -> None:
         self.customers[customer_id] = Customer(customer_id, mean_demand, std_dev_demand)
-
-
-from dataclasses import dataclass, field
-from typing import ClassVar
 
 
 @dataclass

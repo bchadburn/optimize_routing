@@ -1,10 +1,15 @@
 class ORComponent:
-    """Base component object for ORTools optimization program. All other classes, save for the model component, are based on this component.
-    By the time this object is initialized (from a subclass), it should only contain a docstring, a component type, and a name.
-    If you wish, you can modify the string dunder to create a different string representation of every component.
-
-
-    This one should never be used directly.
+    """
+    The base component object for an ORTools optimization program. This class serves as the foundation for all other 
+    components in the ORTools optimization model, except for the model component itself. All other classes representing components, 
+    such as sets, parameters, variables, and constraints, should be derived from this base class.
+    
+    When initializing an instance of a subclass of `ORComponent`, it should only contain a docstring, a component type, and a name. 
+    The component type and name are typically defined in the subclass itself. If desired, you can override the `__str__` method 
+    (the string dunder) to provide a custom string representation for the component.
+    
+    Note: This class should never be instantiated directly. Instead, it should be extended by other classes representing specific types of 
+    components in the optimization model.
     """
 
 

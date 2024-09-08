@@ -1,6 +1,6 @@
 import numpy as np
 
-from optimizer.construct_data_objects import SimulationParameters, SupplyChainData
+from optimizer.data_objects import SimulationParameters, SupplyChainData
 from ortools_objects.model import ORToolsCPModel
 from ortools_objects.param import IndexedORParam, ScalarORParam
 from ortools_objects.set import ORSet

@@ -29,7 +29,7 @@ def calculate_opening_distribution_costs(model: ORToolsCPModel) -> list:
 
 def construct_supply_chain_data(
     mean_demand: list[float],
-    mfg_site_capacity: list[float],
+    mfg_site_capacity: list[int],
     std_dev_demand: list[float],
     distribution_opening_costs: list[float],
     transport_cost_m_to_d: list[list[float]],
@@ -96,13 +96,13 @@ def validate_input_lengths(
     if len(transport_cost_d_to_c) != num_distribution_sites or any(len(row) != num_customers for row in transport_cost_d_to_c):
         raise ValueError("Incorrect dimensions for transport_cost_d_to_c.")
 
-def add_manufacturing_sites(supply_chain_data: SupplyChainData, mfg_site_capacity: list[float]) -> None:
+def add_manufacturing_sites(supply_chain_data: SupplyChainData, mfg_site_capacity: list[int]) -> None:
     """
     Add manufacturing sites to the SupplyChainData object.
 
     Args:
         supply_chain_data (SupplyChainData): The SupplyChainData object to add manufacturing sites to.
-        mfg_site_capacity (list[float]): A list of capacities for each manufacturing site.
+        mfg_site_capacity (list[int]): A list of capacities for each manufacturing site.
     """
     for site_id, capacity in enumerate(mfg_site_capacity):
         supply_chain_data.add_manufacturing_site(site_id=site_id, capacity=capacity)
@@ -160,7 +160,7 @@ def set_transport_costs(
 def optimize(
     supply_chain_data: SupplyChainData,
     sim_params: SimulationParameters,
-    num_distribution_sites: list[int],
+    num_distribution_sites: int,
     solve_infeasibility: bool = False
 ) -> tuple[list[float], float, list[bool]]:
     """Constructs solver """
@@ -186,8 +186,9 @@ def optimize(
     status = or_math_model.solve_model()
     if status != mathopt.TerminationReason.OPTIMAL:
         logger.info("Optimizer didn't find optimal solution")
-        none_dist_list = [None for _ in range(num_distribution_sites)]
-        return none_dist_list, float('inf'), none_dist_list
+        none_dist_list = [0.0 for _ in range(num_distribution_sites)]
+        none_bool_dist_list = [False for _ in range(num_distribution_sites)]
+        return none_dist_list, float('inf'), none_bool_dist_list
     else:
         if or_math_model.model_config.get("solve_infeasibility", False):
             print("Solution returned with slack variables active (Solving for infeasibility)")
@@ -218,13 +219,13 @@ if __name__ == "__main__":
     decision_rolling_period=3
     
     # distribution_opening_costs = [350, 320, 375, 400, 550]
-    distribution_opening_costs = [1000, 100000, 100000, 100000, 100000]
+    distribution_opening_costs = [1000.0, 100000, 100000, 100000, 100000]
     mfg_site_capacity = [600000, 600000]
 
     # mean_demand = [20, 30, 25, 40, 35, 28, 32, 50, 26, 38, 34, 27]
-    mean_demand = [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
+    mean_demand = [100.0, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100]
     # std_dev_demand = [20, 18, 15, 20, 20, 5, 5, 12.4, 12.6, 13.8, 13.4, 12.7]
-    std_dev_demand = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    std_dev_demand = [0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
     # Transportation costs
     # transport_cost_m_to_d = [
@@ -240,15 +241,15 @@ if __name__ == "__main__":
     # ]
 
     transport_cost_m_to_d = [
-        [3, 3, 3, 3, 3],  # Manufacturing site 1
-        [3, 3, 3, 3, 3]  # Manufacturing site 2
+        [3.0, 3, 3, 3, 3],  # Manufacturing site 1
+        [3.0, 3, 3, 3, 3]  # Manufacturing site 2
     ]
     transport_cost_d_to_c = [
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 1
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 2
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 3
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 4
-        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   # Distribution site 5
+        [1.0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 1
+        [1.0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 2
+        [1.0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 3
+        [1.0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],  # Distribution site 4
+        [1.0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   # Distribution site 5
     ]
     
     # Construct supply chain data, params

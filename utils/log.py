@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Union
 
 import loguru
 
@@ -64,8 +64,8 @@ def patching(record):
 
 
 def get_logger(
-    log_process: str = None, log_path: Optional[str] = sys.stderr
-) -> logging.Logger:
+    log_process: str = '', log_path: Union[str, None] = None
+) -> loguru.Logger:
     """
     Creates a log file and returns a Logger object.
 
@@ -88,7 +88,8 @@ def get_logger(
     # Bind logger so the defined process now prints to logs by default
     logger = logger.bind(process=log_process)
 
-    logger.add(log_path, level=log_level, format="{extra[formatted]}")
+    if log_path:
+        logger.add(log_path, level=log_level, format="{extra[formatted]}")
 
     return logger
 

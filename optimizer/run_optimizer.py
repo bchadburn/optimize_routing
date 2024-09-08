@@ -3,7 +3,7 @@ from typing import List, Union
 from ortools.math_opt.python import mathopt
 
 import utils.log as log
-from optimizer.construct_data_objects import SimulationParameters, SupplyChainData
+from optimizer.data_objects import SimulationParameters, SupplyChainData
 from optimizer.math_model_declaration import create_math_model
 from ortools_objects.model import ORToolsCPModel
 

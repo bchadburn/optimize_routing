@@ -71,16 +71,33 @@ class SupplyChainData:
         self.customers[customer_id] = Customer(customer_id, mean_demand, std_dev_demand)
 
 
+from dataclasses import dataclass, field
+from typing import ClassVar
+
+
+@dataclass
 class SimulationParameters:
-    """Include simulation meta-parameters such as number of simulations or days to simulate. 
+    """Include simulation meta-parameters such as number of simulations or days to simulate.
     Model parameters should be passed to ORToolsCPModel
     Args:
         num_days (int): Number of days to simulate.
         num_simulations (int): Number of simulation runs.
         decision_rolling_period (int): Rolling period for decision updates.
     """
-    def __init__(self, num_days, num_simulations, decision_rolling_period):
-        self.num_days = num_days
-        self.num_simulations = num_simulations
-        self.decision_rolling_period = decision_rolling_period
+    num_days: int
+    num_simulations: int
+    decision_rolling_period: int
+
+    MIN_VALUE: ClassVar[int] = 0  # Minimum allowed value for all attributes
+
+    def __post_init__(self):
+        self._validate_range('num_days', self.num_days)
+        self._validate_range('num_simulations', self.num_simulations)
+        self._validate_range('decision_rolling_period', self.decision_rolling_period)
+
+    def _validate_range(self, attr_name: str, attr_value: int):
+        if attr_value < self.MIN_VALUE:
+            raise ValueError(f"{attr_name} must be greater than or equal to {self.MIN_VALUE}")
+
+    
         

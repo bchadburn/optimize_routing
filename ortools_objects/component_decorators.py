@@ -1,3 +1,12 @@
+from typing import Type, TypedDict
+
+from ortools_objects.component import ORComponent
+
+
+class ComponentReturner(TypedDict):
+    model_prefix: str 
+    component_object: Type[ORComponent]
+    
 class _GenericComponentDecorator:
     """Decorator to add the component passed through the decorator cascade to the model tree.
     This adds the component to the model and allows it to be constructed with the model construction.

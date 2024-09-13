@@ -64,13 +64,13 @@ class SupplyChainData:
     distribution_sites: Dict[int, DistributionSite] = field(default_factory=dict)
     customers: Dict[int, 'Customer'] = field(default_factory=dict)
 
-    def add_distribution_site(self, site_id: int, opening_cost: float) -> None:
-        self.distribution_sites[site_id] = DistributionSite(site_id, opening_cost)
-
-    def add_manufacturing_site(self, site_id: int, capacity: int) -> None:
+    def add_manufacturing_site(self, site_id: int, capacity: Number):
         self.manufacturing_sites[site_id] = ManufacturingSite(site_id, capacity)
 
-    def add_customer(self, customer_id: int, mean_demand: float, std_dev_demand: float) -> None:
+    def add_distribution_site(self, site_id: int, opening_cost: Number):
+        self.distribution_sites[site_id] = DistributionSite(site_id, opening_cost)
+
+    def add_customer(self, customer_id: int, mean_demand: Number, std_dev_demand: Number):
         self.customers[customer_id] = Customer(customer_id, mean_demand, std_dev_demand)
 
 

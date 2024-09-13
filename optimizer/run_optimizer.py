@@ -56,12 +56,32 @@ def construct_supply_chain_data(
     validate_input_lengths(num_customers, num_manufacturing_sites, num_distribution_sites, std_dev_demand, transport_cost_m_to_d, transport_cost_d_to_c)
 
     supply_chain_data = SupplyChainData(num_customers, num_distribution_sites, num_manufacturing_sites)
-    customer_ids = [customer_id for customer_id in supply_chain_data.customers]
 
-    add_manufacturing_sites(supply_chain_data, mfg_site_capacity)
-    add_distribution_sites(supply_chain_data, distribution_opening_costs)
-    add_customers(supply_chain_data, customer_ids, mean_demand, std_dev_demand)
-    set_transport_costs(supply_chain_data, transport_cost_m_to_d, transport_cost_d_to_c)
+    # Adding manufacturing sites. Simply assigning ids based on idx
+    mf_ids = [mf_id for mf_id in range(num_manufacturing_sites)]
+    for dist_id in mf_ids:
+        supply_chain_data.add_manufacturing_site(site_id=dist_id, capacity=mfg_site_capacity[dist_id])
+
+    # Adding distribution sites
+    dist_ids = [dist_ids for dist_ids in range(num_distribution_sites)]
+    for dist_id in dist_ids:   
+        supply_chain_data.add_distribution_site(site_id=dist_id, opening_cost=distribution_opening_costs[dist_id])
+
+    # Adding customers
+    cust_ids = [cust_id for cust_id in range(num_customers)]
+    for customer_id in cust_ids:
+        supply_chain_data.add_customer(customer_id=customer_id, mean_demand=mean_demand[customer_id], std_dev_demand=std_dev_demand[customer_id])
+
+    # Set transport costs for manufacturing sites
+    for mf_id in range(num_manufacturing_sites):
+        for dist_id in range(num_distribution_sites):
+            supply_chain_data.manufacturing_sites[mf_id].set_mf_to_dist_transport_costs(dist_id, transport_cost_m_to_d[mf_id][dist_id])
+            
+    # Set transport costs for distribution sites
+    for dist_id in range(num_distribution_sites):
+        for cust_id in range(num_customers):
+            supply_chain_data.distribution_sites[dist_id].set_dist_to_cust_transport_costs(cust_id, transport_cost_d_to_c[dist_id][cust_id])
+    return supply_chain_data
 
     return supply_chain_data
 

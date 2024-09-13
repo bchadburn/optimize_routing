@@ -13,6 +13,7 @@ class ORComponent:
     """
 
 
+
     def __init__(self, **kwds):
         self._ctype = kwds.pop("ctype", None)
         self.doc = kwds.pop("doc", None)

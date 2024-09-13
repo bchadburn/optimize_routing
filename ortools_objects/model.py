@@ -12,47 +12,34 @@ def factory():
     return defaultdict(factory)
 
 
-class ORToolsCPModel():
+class ORToolsCPModel:
+    """Constraint programming modeling object to hold all sets, parameters, variables, and constraints for the model.
+    Main use is to take assigned attributes of the model and construct a model instance using the rest of the model objects.
+    The class is written in a way that does not add variables/constraints to the problem until the construct model instance is called.
+
+    The model contains all objects to be used and constructed and is the core of the model. It can contain sets (from set.py),
+    parameters (from param.py), variables (from var.py), constraints (from constraint.py), and a single objective function
+    (from objective.py) to make models.
+
+    In general, it is best to create sets, followed by parameters, followed by variables, followed by constraints, followed by an
+    objective function. To see details of each of these components, proceed to files listed above.
+
+    The only model specific note is the general workflow: (0) create model, (1) create sets, (2) create parameters, (3) create variables, (4) create
+    constraints, (5) create objective, (6) call construct_model() method, and (7) call solve_model() method.
     """
-    This is a constraint programming modeling object designed to encapsulate all the necessary components 
-    for building an optimization model, including sets, parameters, variables, constraints, and an objective function.
-    The primary purpose of this object is to facilitate the construction of a model instance by combining the various model components. 
-    It is designed to defer the addition of variables and constraints to the problem until the `construct_model()` method is called, 
-    allowing for a more organized and modular approach to model building. At its core, this object serves as a container for the different model elements, 
-    which can be imported from their respective modules:
 
-    - Sets (from set.py)
-    - Parameters (from param.py)
-    - Variables (from var.py)
-    - Constraints (from constraint.py)
-    - Objective function (from objective.py)
-
-    The recommended workflow for building a model using this object is as follows:
-
-    1. Create an instance of the modeling object.
-    2. Define the required sets.
-    3. Define the necessary parameters.
-    4. Define the decision variables.
-    5. Specify the constraints.
-    6. Define the objective function.
-    7. Call the `construct_model()` method to assemble the model components.
-    8. Call the `solve_model()` method to solve the constructed model.
-    
-    """
-    
     def __init__(self, **kwds):
         """Initializes the raw components of the model, mainly
         empty attributes and sets/parameters imported from the data model.
 
         Kwargs:
-            solver (str, Optional): Solver to use. Current solver is HiGHS.
+            solver (str, Optional): Solver to use. Defaults to MathOptSolver.
             max_time (Number, Optional): Time limit of solver in sections. Defaults to 30.
             rel_gap (Number, Optional): Gap for MIP that is allowed. Defaults to 0.01 (1%).
             log (bool, Optional): Declares whether or not to print detailed log. Defaults to True.
             callback (Callable, Optional): How to print the log information. Defaults to print.
             logger (logging.Logger): Logging
-            Other KWARGS (Optional): Can be used in any way to pass information to the model to be used by constraints 
-            in the form of model_config[key]
+            Other KWARGS (Optional): Can be used in any way to pass information to the model to be used by constraints in the form of model_config[key]
         """
         # Create the solver
         self.mathopt_model: mathopt.Model = mathopt.Model(name="MathOpt Model")
@@ -73,7 +60,7 @@ class ORToolsCPModel():
 
     def __getattr__(self, component_name: str) -> Any:
         """Takes in a component type with some arguments. If the component name is valid (in the factor),
-        then it returns a Component decorator object, taking the component reference as an argument,
+        then it returns a Componentdecorator object, taking the component reference as an argument,
         that can be used to add the component to the model."""
         from ortools_objects.component_factory import ComponentFactory
         
@@ -176,7 +163,7 @@ class ORToolsCPModel():
             else:
                 if self.logger:
                     self.logger.warning(
-                        "Feasible solution not found. Check model LP file for possible infeasibility or run with slack variables on."
+                        "Feasible solution not found. Check model LP file for possible infeasibilities or run with slack variables on."
                     )
                 return None
         else:

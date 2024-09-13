@@ -87,7 +87,7 @@ class IndexedORStandardConst(IndexedComponent):
     def construct(
         self,
         model_wrapper: ORToolsCPModel,
-        logger: Union[logging.Logger, None] = None
+        logger: logging.Logger = None,
     ) -> None:
         """Constructs the rule for each index in the index set of the indexed constraint.
 
@@ -101,8 +101,8 @@ class IndexedORStandardConst(IndexedComponent):
         if logger:
             logger.debug(f"Began adding constraint {self._name} to model.")
             original_const = len(list(model_wrapper.mathopt_model.linear_constraints()))
-        if not self._index_set or len(self._index_set()) == 0:
-            return 
+        if len(self._index_set) == 0:
+            return dict()
         if isinstance(self._index_set[0], tuple):
             rule_dict = {
                 index: (

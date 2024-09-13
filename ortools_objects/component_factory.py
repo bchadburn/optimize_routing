@@ -1,6 +1,5 @@
 from typing import Callable
 
-from ortools_objects.component_decorators import ComponentReturner
 from ortools_objects.constraint import IndexedORStandardConst, ScalarORStandardConst
 from ortools_objects.indexed_set import IndexedORSet
 from ortools_objects.model import ORToolsCPModel
@@ -55,13 +54,9 @@ class ComponentFactory:
         return str(name) in cls._register.keys()
 
     @classmethod
-    def retrieve_component(cls, name: str) -> ComponentReturner:
+    def retrieve_component(cls, name: str) -> Callable:
         if name in cls._register:
             return cls._register[name]
-        else:
-            raise ValueError(
-                f"Type {name} is not a valid component type in the component factory."
-            )
 
 
 # Create get attr of model

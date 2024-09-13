@@ -1,6 +1,6 @@
 import logging
 from numbers import Number
-from typing import Union
+from typing import Any, Optional, Union
 
 import numpy as np
 from ortools.math_opt.python import mathopt
@@ -66,7 +66,7 @@ class IndexedORBoolVariable(IndexedComponent):
         IndexedComponent.__init__(self, *args, **kwds)
 
 
-    def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger) -> None:
+    def construct(self, model_wrapper: ORToolsCPModel, logger: Union[logging.Logger, None]) -> None:
         """
         Constructs and adds the indexed boolean variables to the given ORTools model.
         This method creates and adds the boolean variables represented by this object to the provided ORTools model. 
@@ -115,7 +115,9 @@ class IndexedORBoolVariable(IndexedComponent):
 
 
     def process_result(
-        self, result: mathopt.SolveResult, logger: logging.Logger = None
+        self,
+        result: mathopt.SolveResult,
+        logger: Optional[logging.Logger] = None
     ) -> None:
         self._solution = {
             index: round(result.variable_values(self[index])) for index in self
@@ -128,7 +130,7 @@ class IndexedORBoolVariable(IndexedComponent):
                 )
 
 
-    def __getitem__(self, index: Union[str, float]) -> float:
+    def __getitem__(self, index: Union[str, tuple[Any, ...]]) -> Any:
         if self._solved:
             return self._solution[index]
         else:
@@ -191,7 +193,7 @@ class ScalarORBoolVariable(ORComponent):
 
 
     def construct(
-        self, model_wrapper: ORToolsCPModel, logger: logging.Logger
+        self, model_wrapper: ORToolsCPModel, logger: Union[logging.Logger, None]
     ) -> mathopt.Variable:
         """Adds the boolean variable to the model.
 
@@ -214,7 +216,7 @@ class ScalarORBoolVariable(ORComponent):
 
 
     def process_result(
-        self, result: mathopt.SolveResult, logger: logging.Logger = None
+        self, result: mathopt.SolveResult, logger: Union[logging.Logger, None] = None
     ) -> None:
         self._solution = round(result.variable_values(self._data))
         self._solved = True
@@ -322,7 +324,7 @@ class IndexedORContinuousVariable(IndexedComponent):
         }
 
 
-    def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger) -> None:
+    def construct(self, model_wrapper: ORToolsCPModel, logger: Union[logging.Logger, None]) -> None:
         """Add the variable to the model
 
         Args:
@@ -383,7 +385,7 @@ class IndexedORContinuousVariable(IndexedComponent):
 
 
     def process_result(
-        self, result: mathopt.SolveResult, logger: logging.Logger = None
+        self, result: mathopt.SolveResult, logger: Union[logging.Logger, None] = None
     ) -> None:
         self._solution = {index: result.variable_values(self[index]) for index in self}
         self._solved = True
@@ -462,8 +464,9 @@ class ScalarORContinuousVariable(ORComponent):
             return self._data
 
 
-    def construct(self, model_wrapper: ORToolsCPModel, logger: logging.Logger):
+    def construct(self, model_wrapper: ORToolsCPModel, logger: Union[logging.Logger, None]):
         """Adds the variable to the model
+
 
         Args:
             model_wrapper (ORToolsCPModel): The model to which the variable is added
@@ -479,7 +482,7 @@ class ScalarORContinuousVariable(ORComponent):
 
 
     def process_result(
-        self, result: mathopt.SolveResult, logger: logging.Logger = None
+        self, result: mathopt.SolveResult, logger: Union[logging.Logger, None] = None
     ) -> None:
         self._solution = result.variable_values(self._data)
         self._solved = True

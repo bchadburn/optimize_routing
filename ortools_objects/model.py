@@ -5,6 +5,7 @@ from typing import Any
 from ortools.math_opt.python import mathopt
 
 from ortools_objects.component import ORComponent
+from ortools_objects.component_container import ModelComponentContainer
 from ortools_objects.component_decorators import ComponentDecorator
 
 
@@ -12,7 +13,7 @@ def factory():
     return defaultdict(factory)
 
 
-class ORToolsCPModel:
+class ORToolsCPModel(ModelComponentContainer):
     """
     This is a constraint programming modeling object designed to encapsulate all the necessary components 
     for building an optimization model, including sets, parameters, variables, constraints, and an objective function.

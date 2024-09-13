@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Callable, Union
 
 from ortools_objects.component import ORComponent
 from ortools_objects.model import ORToolsCPModel
@@ -52,7 +52,7 @@ class ORObjective(ORComponent):
     def construct(
         self,
         model_wrapper: ORToolsCPModel,
-        logger: logging.Logger = None,
+        logger: Union[logging.Logger, None] = None
     ):
         """Add the objective function into the model using the rule
 

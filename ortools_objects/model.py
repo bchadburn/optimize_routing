@@ -60,7 +60,7 @@ class ORToolsCPModel:
 
     def __getattr__(self, component_name: str) -> Any:
         """Takes in a component type with some arguments. If the component name is valid (in the factor),
-        then it returns a Componentdecorator object, taking the component reference as an argument,
+        then it returns a Component Decorator object, taking the component reference as an argument,
         that can be used to add the component to the model."""
         from ortools_objects.component_factory import ComponentFactory
         

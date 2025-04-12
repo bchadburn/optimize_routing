@@ -16,7 +16,7 @@ class ORObjective(ORComponent):
         rule (Callable): Callable that returns an expression in ORTools, taking in full model object as input
         sense (str, Optional): Whether the function should be minimized or maximized. Defaults to 'minimize'
 
-    Example use: I want to charge $1/product for cost optimisation. I  have a set of sites in the form of an ORSet object,
+    Example use: I want to charge $1/product for cost optimization. I have a set of sites in the form of an ORSet object,
     a variable representing cost use indexed over those sites, and I want to minimize overall cost.
 
     def objective_function(model):

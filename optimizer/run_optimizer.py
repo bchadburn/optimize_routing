@@ -56,7 +56,6 @@ def run_global_milp(
     import utils.log as log
     from ortools.linear_solver import pywraplp
     from optimizer.math_model_declaration import create_math_model
-    from optimizer.math_model_constraints import minimize_cost_objective
 
     logger = log.get_logger("MILP-Global")
     sim_params = SimulationParameters(num_days, 1, decision_rolling_period)
@@ -67,19 +66,19 @@ def run_global_milp(
     if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
         raise RuntimeError("Global MILP: no feasible solution found")
 
-    total_cost = minimize_cost_objective(model).solution_value()
+    total_cost = model.lp_solver.Objective().Value()
     dc_decisions = [
-        {d for d in model.s_distribution_sites() if model.bv_distribution_on[day, d].solution_value() > 0.5}
+        {d for d in model.s_distribution_sites() if model.bv_distribution_on[day, d] > 0.5}
         for day in model.s_time_indices()
     ]
     transport_m_to_d = sum(
-        model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m].solution_value()
+        model.p_transport_cost_m_to_d[(m, d)] * model.v_transport_m_to_d[d, day, m]
         for d in model.s_distribution_sites()
         for day in model.s_time_indices()
         for m in model.s_manufacturing_sites()
     )
     transport_d_to_c = sum(
-        model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c[d, day, c].solution_value()
+        model.p_transport_cost_d_to_c[(d, c)] * model.v_transport_d_to_c[d, day, c]
         for d in model.s_distribution_sites()
         for day in model.s_time_indices()
         for c in model.s_customers()
@@ -105,7 +104,6 @@ def run_daily_myopic(
     import utils.log as log
     from ortools.linear_solver import pywraplp
     from optimizer.math_model_declaration import create_math_model
-    from optimizer.math_model_constraints import minimize_cost_objective
 
     logger = log.get_logger("MILP-Daily")
     costs = []
@@ -120,7 +118,7 @@ def run_daily_myopic(
             if status not in (pywraplp.Solver.OPTIMAL, pywraplp.Solver.FEASIBLE):
                 total_cost += 1e6
             else:
-                total_cost += minimize_cost_objective(model).solution_value()
+                total_cost += model.lp_solver.Objective().Value()
         costs.append(total_cost)
     return {
         "mean_total_cost": float(np.mean(costs)),

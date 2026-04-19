@@ -3,6 +3,7 @@ name = "optimize-routing"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
+    "loguru>=0.7",
     "ortools>=9.9",
     "numpy>=1.26",
     "pandas>=2.2",

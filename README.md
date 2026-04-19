@@ -1,0 +1,61 @@
+# Supply Chain Routing Optimization — MILP vs Q-Learning
+
+Multi-period supply chain routing problem comparing three solution approaches:
+global MILP (provably optimal), daily myopic MILP, and tabular Q-learning.
+
+**Problem:** 10-day planning horizon, 2 manufacturing sites, 5 distribution centers,
+12 customers with stochastic demand. Minimize total cost: DC opening costs +
+transportation costs (manufacturing → DC → customer).
+
+## Approaches
+
+| Method | Description | Optimality |
+|---|---|---|
+| **MILP Global** | Solves the full 10-day horizon as one MILP (OR-Tools/SCIP) | Provably optimal |
+| **MILP Daily Myopic** | Re-solves a 1-day MILP each day with fresh demand | Suboptimal (~4% gap) |
+| **Q-Learning** | Learns DC-open policy via tabular Q-learning; LP solves routing given DC decisions | Heuristic |
+
+The RL decomposition is principled: the agent handles the combinatorial DC-open decisions
+(binary, multi-period, rolling window constraint), while the LP optimally routes flow
+given those decisions. This is the correct separation — routing is a solved subproblem.
+
+## Results
+
+Run `uv run python -m rl.train` to generate results. See `comparison.ipynb` for the
+full comparison table, learning curve, and policy insights.
+
+## Quickstart
+
+```bash
+uv sync
+uv run python -m rl.train          # run all three methods, write results/
+jupyter lab comparison.ipynb        # open comparison notebook
+uv run pytest tests/ -v             # run test suite
+```
+
+## Project Structure
+
+```
+optimizer/          OR-Tools MILP model (sets, params, vars, constraints, objective)
+ortools_objects/    Reusable OR-Tools OOP abstraction layer
+rl/
+  environment.py    SupplyChainEnv — state, action, reward, rolling window, LP sub-solver
+  agent.py          QLearningAgent — Q-table, epsilon-greedy, Q-learning update
+  train.py          Training loop, evaluation, results export
+utils/
+  results.py        CSV writing utilities
+tests/              Pytest suite
+results/            Output CSVs (gitignored)
+comparison.ipynb    Comparison notebook
+```
+
+## Further Explorations
+
+- **DQN**: Replace the tabular Q-table with a neural network to handle larger state spaces
+  (100+ DCs, longer horizons). Tabular Q-learning is exact but does not scale beyond ~1,000 states.
+- **Multi-agent RL**: Assign one agent per DC for decentralized policy learning in
+  multi-echelon networks.
+- **Constraint-aware RL**: Encode the rolling window constraint directly into the reward
+  via Lagrangian relaxation instead of environment-side enforcement.
+- **RL as MILP warm-start**: Use the RL policy to generate a high-quality initial solution
+  for the MILP solver, reducing solve time on large instances.

@@ -53,6 +53,20 @@ def test_rolling_window_forces_dc_open(env):
     _, _, _ = env.step(action=0)
     assert env.forced_open_mask & 1  # bit 0 still set
 
+def test_no_double_charge_after_rolling_window(env):
+    """A DC that stays open continuously should not be recharged after rolling window expires."""
+    env.reset()
+    # Open DC 0 on day 0 — incurs opening cost
+    _, r0, _ = env.step(action=1)  # day 0: DC 0 newly opened
+    # Days 1, 2: rolling window active, DC 0 forced open — no new opening cost
+    _, r1, _ = env.step(action=1)
+    _, r2, _ = env.step(action=1)
+    # Day 3: rolling window expired but DC stays open — should NOT incur opening cost again
+    _, r3, _ = env.step(action=1)
+    # If DC 0 opening cost is 320, day 0 reward should be lower than day 3 reward
+    # (day 0 has opening cost; day 3 should only have routing cost)
+    assert r0 < r3  # day 0 costs more (opening cost included), day 3 only routing
+
 def test_demand_bucket_coverage(env):
     """After many resets, all 3 demand buckets should appear."""
     buckets = set()

@@ -116,11 +116,13 @@ class SupplyChainEnv:
         open_dcs = [dc_id for dc_id in range(self.num_dcs) if (executed_action >> dc_id) & 1]
         demands = self._daily_demands[self._day]
 
-        # DC opening cost: incurred only when DC wasn't open in the previous rolling window
+        # DC opening cost: incurred only when DC is newly opened (transitions from OFF to ON).
+        # _compute_reward is called before _update_dc_status, so _dc_status_bitmask still
+        # reflects yesterday's state — use it to detect newly-opened DCs.
         dc_cost = 0.0
         for dc_id in open_dcs:
-            last_opened = self._open_start.get(dc_id, -self.rolling_period)
-            if self._day >= last_opened + self.rolling_period or last_opened == -self.rolling_period:
+            was_open = (self._dc_status_bitmask >> dc_id) & 1
+            if not was_open:
                 dc_cost += self.data.distribution_sites[dc_id].opening_cost
 
         lp_cost = self._solve_routing_lp(open_dcs, demands)

@@ -3,10 +3,7 @@ from numbers import Number
 from typing import Union
 
 from ortools_objects.component import ORComponent
-from ortools_objects.indexed_component import (
-    IndexedComponent,
-)
-from ortools_objects.set import ORSet
+from ortools_objects.indexed_component import IndexedComponent
 
 
 class IndexedORParam(IndexedComponent):
@@ -92,7 +89,7 @@ class IndexedORParam(IndexedComponent):
     def log_parameter_values(self, logger: logging.Logger):
         for index in self:
             if self[index] != 0:
-                logger.info(
+                logger.debug(
                     f"Value of {self._name} at indices {self._index_name}: {index}  is {self[index]}."
                 )
 

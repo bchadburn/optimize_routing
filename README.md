@@ -21,7 +21,17 @@ given those decisions. This is the correct separation — routing is a solved su
 
 ## Results
 
-Run `uv run python -m rl.train` to generate results. See `comparison.ipynb` for the
+| Method | Avg Total Cost | Gap vs Optimal |
+|---|---|---|
+| MILP Global | $17,020 | — (optimal) |
+| MILP Daily Myopic | $19,519 | +14.7% |
+| Q-Learning (15k episodes) | $28,715 | +68.7% |
+
+The daily myopic MILP loses 14.7% by ignoring future demand; the Q-learning agent is a
+proof-of-concept showing hierarchical RL decomposition — the gap narrows significantly
+with a larger state representation or function approximation.
+
+Run `uv run python -m rl.train` to reproduce results. See `comparison.ipynb` for the
 full comparison table, learning curve, and policy insights.
 
 ## Quickstart

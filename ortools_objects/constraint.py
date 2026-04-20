@@ -111,23 +111,23 @@ class IndexedORStandardConst(IndexedComponent):
         if len(self._index_set) == 0:
             return dict()
         if isinstance(self._index_set[0], tuple):
-            rule_dict = {
-                index: [
-                    solver.Add(expr) for expr in self._rule(full_model_object, *index)
-                ]
-                if isinstance(self._rule(full_model_object, *index), list)
-                else solver.Add(self._rule(full_model_object, *index))
-                for index in self._index_set
-            }
+            rule_dict = {}
+            for index in self._index_set:
+                result = self._rule(full_model_object, *index)
+                rule_dict[index] = (
+                    [solver.Add(expr) for expr in result]
+                    if isinstance(result, list)
+                    else solver.Add(result)
+                )
         else:
-            rule_dict = {
-                index: [
-                    solver.Add(expr) for expr in self._rule(full_model_object, index)
-                ]
-                if isinstance(self._rule(full_model_object, index), list)
-                else solver.Add(self._rule(full_model_object, index))
-                for index in self._index_set
-            }
+            rule_dict = {}
+            for index in self._index_set:
+                result = self._rule(full_model_object, index)
+                rule_dict[index] = (
+                    [solver.Add(expr) for expr in result]
+                    if isinstance(result, list)
+                    else solver.Add(result)
+                )
         new_const = solver.NumConstraints()
         if logger:
             logger.info(f"Added constraint {self._name} to model")

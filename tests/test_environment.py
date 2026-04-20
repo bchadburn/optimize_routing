@@ -63,7 +63,7 @@ def test_no_double_charge_after_rolling_window(env):
     _, r2, _ = env.step(action=1)
     # Day 3: rolling window expired but DC stays open — should NOT incur opening cost again
     _, r3, _ = env.step(action=1)
-    # If DC 0 opening cost is 320, day 0 reward should be lower than day 3 reward
+    # If DC 0 opening cost is 350, day 0 reward should be lower than day 3 reward
     # (day 0 has opening cost; day 3 should only have routing cost)
     assert r0 < r3  # day 0 costs more (opening cost included), day 3 only routing
 

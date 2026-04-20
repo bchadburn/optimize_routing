@@ -71,7 +71,7 @@ class ORToolsCPModel:
         for name, count in names.items():
             if count > 1:
                 raise ValueError(
-                    f"Name {name} is used by more than two model objects. Check your model declaration and remove any duplicates."
+                    f"Name {name} is used by more than one model objects. Check your model declaration and remove any duplicates."
                 )
 
     def construct_model(self):

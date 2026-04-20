@@ -51,11 +51,9 @@ class ORSet(ORComponent):
 
         return list(product(self._data, *[arg._data for arg in args]))
 
-    # Returns the data in the set if called as function
     def __call__(self):
         return self._data
 
-    # Used to iteratively yield elements from the set for the purposes of constraint calls
     def __iter__(self):
         yield from self._data
 

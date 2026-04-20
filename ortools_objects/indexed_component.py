@@ -141,7 +141,6 @@ class IndexedComponent(ORComponent):
                     f"Argument {str(arg)} passed to indexed OR parameter is not an ORSet object"
                 )
 
-    # If the parameter is called as a function, it should return the value at the index
     def __call__(self, index):
         return self._data[index]
 

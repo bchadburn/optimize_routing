@@ -1,5 +1,4 @@
 import json
-import logging
 import os
 import sys
 from typing import Any
@@ -65,7 +64,7 @@ def patching(record):
 
 def get_logger(
     log_process: str = None, log_path: str | None = sys.stderr
-) -> logging.Logger:
+) -> loguru.Logger:
     """
     Creates a log file and returns a Logger object.
 
@@ -75,7 +74,7 @@ def get_logger(
             If not specified, logs will be printed to the console.
 
     Returns:
-        logging.Logger: Logger object that will log information and warnings, etc.
+        loguru.Logger: Logger object that will log information and warnings, etc.
     """
 
     logger = loguru.logger

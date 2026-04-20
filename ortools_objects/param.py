@@ -121,7 +121,6 @@ class ScalarORParam(ORComponent):
             )
         ORComponent.__init__(self, *args, **kwds)
 
-    # Returns dimension
     def __dim__(self):
         return 1
 
@@ -130,6 +129,5 @@ class ScalarORParam(ORComponent):
             raise KeyError(f"Index access for scalar param {self._name} must be None.")
         return self._data
 
-    # Returns the data if called as function
     def __call__(self):
         return self._data

@@ -3,7 +3,6 @@ from numbers import Number
 
 from ortools.linear_solver import pywraplp
 
-from ortools_objects.component import ORComponent
 from ortools_objects.indexed_component import IndexedComponent
 
 
@@ -94,70 +93,6 @@ class IndexedORBoolVariable(IndexedComponent):
             return self._solution[index]
         else:
             return super().__getitem__(index)
-
-
-class ScalarORBoolVariable(ORComponent):
-    """Creates a scalar boolean variable to be added to a solver.
-
-    Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-
-    Example use: I want a single boolean variable indicating whether a single site should be added or not. I can directly create a variable:
-
-    model.bv_create_distribution_site = ScalarORBoolVar(name='foo', doc='foo')
-    """
-
-    def __init__(self, **kwds):
-        kwds.setdefault("ctype", "var")
-        self._solved = False
-        self._validate_kwds(kwds)
-        self._log_solution = kwds.pop("log_solution", False)
-
-        IndexedComponent.__init__(self, (), **kwds)
-
-    def __getitem__(self, index):
-        if index is not None:
-            raise KeyError(f"Index access for scalar var {self._name} must be None.")
-        if self._solved:
-            return self._solution
-        else:
-            return self._data
-
-    def _validate_kwds(self, kwds):
-        if "log_cardinality" in kwds:
-            assert isinstance(
-                kwds["log_cardinality"], bool
-            ), "Log cardinality argument must be a boolean"
-        if "log_solution" in kwds:
-            assert isinstance(
-                kwds["log_solution"], bool
-            ), "Log solution argument must be a boolean"
-
-    def construct(
-        self, solver: pywraplp.Solver, logger: logging.Logger
-    ) -> pywraplp.Variable:
-        """Adds the boolean variable to the solver.
-
-        Args:
-            solver (pywraplp.Solver): The solver to which the boolean variable should be added
-
-        Returns:
-            pywraplp.Variable: The boolean variable added to the solver
-        """
-        self._constructed = True
-        self._solved = False
-        if logger:
-            logger.info(f"Added scalar variable {self._name} to model")
-        self._data = solver.BoolVar(f"{self._name}")
-
-    def process_result(self, logger: logging.Logger = None) -> None:
-        self._solution = self._data.SolutionValue()
-        self._solved = True
-        if logger and self._log_solution:
-            logger.info(
-                f"Scalar variable {self._name} has value {round(self._solution,2)}"
-            )
 
 
 class IndexedORContinuousVariable(IndexedComponent):
@@ -278,7 +213,7 @@ class IndexedORContinuousVariable(IndexedComponent):
             ), "Lower bound default must be a number"
         if "ub_default" in kwds:
             assert isinstance(
-                kwds["lb_default"], Number
+                kwds["ub_default"], Number
             ), "Upper bound default must be a number"
         if "lower_bounds" in kwds:
             assert isinstance(
@@ -312,86 +247,3 @@ class IndexedORContinuousVariable(IndexedComponent):
         else:
             return super().__getitem__(index)
 
-
-class ScalarORContinuousVariable(ORComponent):
-    """Scalar continuous variable to be added to the model.
-
-    Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the dictionary entries
-        lower_bound (Number, Optional): The default lower bound of the variable. Defaults to 0.
-        upper_bound (Number, Optional): The default upper bound of the variable. Defaults to infinity.
-        log_solution (bool, Optional): Boolean indicating if solution of variable shoule be sent to log. Defaults to True.
-
-    Example use: I want to create a single variable representing final temperature constraint. I can do so using
-    a scalar variable:
-
-    model.v_final_temperature = ScalarORContinuousVariable(name='foo', doc='foo', lower_bound=-10, upper_bound=500)
-
-    If no lower or upper bound is provided, model will assume 0 to infinity range.
-    """
-
-    def __init__(self, **kwds):
-        # Set the component type to variable
-        kwds.setdefault("ctype", "var")
-
-        self._validate_kwds(kwds)
-
-        # Set the lower and upper bound attributes
-        self._lb = kwds.pop("lower_bound", 0)
-        self._ub = kwds.pop("upper_bound", pywraplp.Solver.Infinity())
-
-        # Determines whether to log number of variables or number of constraints
-        self._log_solution = kwds.pop("log_solution", False)
-        self._constructed = False
-        self._solved = False
-
-        # Initialize the component object
-        ORComponent.__init__(self, **kwds)
-
-    def __getitem__(self, index):
-        if index is not None:
-            raise KeyError(f"Index access for scalar var {self._name} must be None.")
-        if self._solved:
-            return self._solution
-        else:
-            return self._data
-
-    def construct(self, solver: pywraplp.Solver, logger: logging.Logger):
-        """Adds the variable to the solver
-
-        Args:
-            solver (pywraplp.Solver): The solver to which the variable is added
-            logger (logging.Logger): The logger (optional). Defaults to None.
-        """
-        self._constructed = True
-        self._solved = False
-        if logger:
-            logger.info(f"Added scalar variable {self._name} to model")
-        self._data = solver.NumVar(self._lb, self._ub, f"{self._name}")
-
-    def process_result(self, logger: logging.Logger = None) -> None:
-        self._solution = self._data.SolutionValue()
-        self._solved = True
-        if logger and self._log_solution:
-            logger.info(
-                f"Scalar variable {self._name} has value {round(self._solution,2)}"
-            )
-
-    def _validate_kwds(self, kwds):
-        if "lower_bound" in kwds:
-            assert isinstance(
-                kwds["lower_bound"], Number
-            ), "Lower bound must be a number"
-        if "upper_bound" in kwds:
-            assert isinstance(
-                kwds["upper_bound"], Number
-            ), "Upper bound must be a number"
-        if "log_cardinality" in kwds:
-            assert isinstance(
-                kwds["log_cardinality"], bool
-            ), "Log cardinality argument must be a boolean"
-        if "log_solution" in kwds:
-            assert isinstance(
-                kwds["log_solution"], bool
-            ), "Log solution argument must be a boolean"

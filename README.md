@@ -14,7 +14,7 @@ transportation costs (manufacturing → DC → customer).
 | Method | Description | Optimality |
 |---|---|---|
 | **MILP Global** | Solves the full 10-day horizon as one MILP (OR-Tools/SCIP) | Provably optimal |
-| **MILP Daily Myopic** | Re-solves a 1-day MILP each day with fresh demand | Suboptimal (~4% gap) |
+| **MILP Daily Myopic** | Re-solves a 1-day MILP each day with fresh demand | Suboptimal (~14.7% gap) |
 | **Q-Learning** | Learns DC-open policy via tabular Q-learning; LP solves routing given DC decisions | Heuristic |
 
 The RL decomposition is principled: the agent handles the combinatorial DC-open decisions

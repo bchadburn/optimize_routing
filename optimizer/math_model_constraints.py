@@ -26,12 +26,10 @@ def distribution_site_open_duration_rolling_constraint(model, time_period, distr
     return model.bv_distribution_on[time_period, distribution_site] == bv_cost_incurred_rolling_period 
                 
 def distribution_supply_equal_capacity(model, time_period, manufacturing_site):
-    # Supply constraints so total mfg site supply is not more than capacity at a given distribution site  
     total_supply_m = sum([model.v_transport_m_to_d[d, time_period, manufacturing_site] for d in model.s_distribution_sites()])
     return total_supply_m <= model.p_manufacturing_site_capacity[manufacturing_site]
  
 def distribution_shipments_equal_customer_demand(model, time_period, customer):
-    # Demand constraints so total shipments is equal to customer demand
     return sum([model.v_transport_d_to_c[d, time_period, customer] for d in model.s_distribution_sites()]) == model.p_customer_demand[time_period, customer]
             
 def minimize_cost_objective(model):
@@ -50,7 +48,6 @@ def minimize_cost_objective(model):
     return total_cost
     
 def distribution_shipments_equal_total_received_shipments(model, time_period, distribution_site):
-    # Limit distribution center shipments to the total of received shipments
     total_shipment_from_m_to_d = sum([model.v_transport_m_to_d[distribution_site, time_period, manufacturing_site] for manufacturing_site in model.s_manufacturing_sites()])
     total_shipment_from_d_to_c = sum([model.v_transport_d_to_c[distribution_site, time_period, customer] for customer in model.s_customers()])
     return total_shipment_from_m_to_d == total_shipment_from_d_to_c

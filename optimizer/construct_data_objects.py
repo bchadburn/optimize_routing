@@ -45,7 +45,7 @@ class Customer:
         std_dev_demand (float): Standard deviation of demand.
     """
     def __init__(self, customer_id: int, mean_demand: Number, std_dev_demand: Number):
-        self.customer_name = customer_id
+        self.customer_id = customer_id
         self.mean_demand = mean_demand
         self.std_dev_demand = std_dev_demand
 

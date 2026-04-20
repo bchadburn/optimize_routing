@@ -3,7 +3,6 @@ from collections.abc import Callable
 
 from ortools.linear_solver import pywraplp
 
-from ortools_objects.component import ORComponent
 from ortools_objects.indexed_component import IndexedComponent
 from ortools_objects.model import ORToolsCPModel
 
@@ -138,59 +137,3 @@ class IndexedORStandardConst(IndexedComponent):
                 )
         self._data = rule_dict
 
-
-class ScalarORStandardConst(ORComponent):
-    """Scalar OR constraint, used when only one constraint should be declared.
-    Should not have any args.
-
-    Kwargs:
-        doc (str): A doc string that can be used in the string representation of the constraint
-        name (str): The name of the constraint that will be used to name the constraint
-        rule (Callable): A callable function that takes in a "model" (ORToolsCPModel). Should not have any indices.
-
-    Example Use: Let's say that I want to constraint a specific site's example2. I could accomplish this through a scalar
-    constraint. First, I would need to create the example2 variable. Here, I will make it indexed for demonstration purposes.
-    Then, I would need to make a callable rule with only the ORToolsCPModel as the argument:
-
-    def constraint_specific_products_produced(model):
-        return v_example_constraint[0, 'site0'] >= 50
-
-    Then, I would create a standard scalar constraint and add it as an attribute to the model:
-
-    model.example_constraint = ScalarORStandardConstraint(name='test', doc='test', rule=constraint_specific_constraint)
-    """
-
-    def __init__(
-        self,
-        **kwds,
-    ):
-        kwds.setdefault("ctype", "constraint")
-        self._rule = kwds.pop("rule")
-        assert isinstance(
-            self._rule,
-            Callable,
-        ), "Rule argument supplied to constraint must be a callable function"
-        ORComponent.__init__(self, (), **kwds)
-        assert (
-            self._rule.__code__.co_argcount == 1
-        ), "Scalar constraint rule function must only contain a call to model object and nothinbg else"
-
-    def construct(
-        self,
-        full_model_object: ORToolsCPModel,
-        solver: pywraplp.Solver,
-        logger: logging.Logger = None,
-    ):
-        """Constructs a single constraint
-
-        Args:
-            full_model_object (ORToolsCPModel): Full mode object with all constraints, variables, parameters, and objective
-            solver (pywraplp.Solver): Solver to which the constraint should be added.
-            logger (logging.Logger, optional): Optional loggger. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
-        if logger:
-            logger.info(f"Added scalar constraint {self._name} to model")
-        self._data = solver.Add(self._rule(full_model_object))

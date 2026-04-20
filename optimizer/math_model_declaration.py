@@ -54,17 +54,16 @@ def _add_base_model_parameters(
 ) -> None:
     
     """
-    Add fixed values for the optimization process. They can be scalers, but are more often indexed over sets. 
-    To achieve this, we create the sets first and then assign values to all instances within those sets. 
+    Add fixed values for the optimization process. They can be scalers, but are more often indexed over sets.
+    To achieve this, we create the sets first and then assign values to all instances within those sets.
 
     Args:
         model (ORToolsCPModel): Model object to which parameters should be added.
-        schedule_list_dict (List[Dict]): List of dictionaries (one for each time period) with data about each period
         supply_chain_data (SupplyChainData): Supply chain data such as distribution, manufacturing, and customer data
+        sim_params (SimulationParameters): Simulation meta-parameters such as number of simulations or days to simulate.
     """
-    # Create parameters
     model.p_manufacturing_site_capacity = IndexedORParam(model.s_manufacturing_sites, name="p_manufacturing_site_capacity",
-        doc="Avg daily demand from customers", initialize={
+        doc="Manufacturing site capacity", initialize={
             manufacturing_site: supply_chain_data.manufacturing_sites[manufacturing_site].capacity
             for manufacturing_site in model.s_manufacturing_sites()
         }
@@ -101,8 +100,7 @@ def _add_base_model_parameters(
         }
     )    
     
-    
-    # Simulate by sampling from customer demand distribution
+
     model.p_customer_demand = IndexedORParam(
         model.s_time_indices,
         model.s_customers,
@@ -114,9 +112,6 @@ def _add_base_model_parameters(
             for cust_idx in model.s_customers()
         },
     )
-    
-    # Log vals such as computed vals
-    # model.p_example_computed_val.log_parameter_values(model.logger)
 
 
 def _add_base_model_variables(model: ORToolsCPModel) -> None:
@@ -158,49 +153,8 @@ def _add_base_model_variables(model: ORToolsCPModel) -> None:
         log_solution=True,
     )
 
-def _add_slack_variables(model: ORToolsCPModel) -> None:
-    
-    model.v_transport_m_to_d_shipments_slack = IndexedORContinuousVariable(
-        model.s_distribution_sites,
-        model.s_time_indices,
-        model.s_manufacturing_sites,
-        name="ransport_m_to_d_shipments_slack",
-        log_solution=True,
-    )
-    
-    model.v_transport_m_to_d_capacity_slack = IndexedORContinuousVariable(
-        model.s_distribution_sites,
-        model.s_time_indices,
-        model.s_manufacturing_sites,
-        name="transport_m_to_d_capacity_slack",
-        log_solution=True,
-    )
-    
-    model.v_transport_d_to_c_shipments_slack = IndexedORContinuousVariable(
-        model.s_distribution_sites,
-        model.s_time_indices,
-        model.s_customers,
-        name="transport_d_to_c_shipments_slack",
-        log_solution=True,
-    )    
 
-    model.v_transport_d_to_c_shipments_equal_demand_slack = IndexedORContinuousVariable(
-        model.s_distribution_sites,
-        model.s_time_indices,
-        model.s_customers,
-        name="transport_d_to_c_shipments_equal_demand_slack",
-        log_solution=True,
-    )
-    
-    model.v_transport_d_to_c_demand_slack = IndexedORContinuousVariable(
-        model.s_distribution_sites,
-        model.s_time_indices,
-        model.s_customers,
-        name="transport_d_to_c_demand_slack",
-        log_solution=True,
-    )
-    
-    
+
 def _add_base_model_constraints(model: ORToolsCPModel) -> None:
     """Adds model constraints by invoking functions defined in the constraints file. 
     Functions are associated with specific elements of an index. To skip an index, 
@@ -298,7 +252,4 @@ def create_math_model(
     _add_base_model_variables(model)
     _add_base_model_constraints(model)
     
-    if model.model_config.get("solve_infeasibility", False):
-        _add_slack_variables(model)
-        
     _add_model_objective(model)

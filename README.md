@@ -1,5 +1,7 @@
 # Supply Chain Routing Optimization — MILP vs Q-Learning
 
+![CI](https://github.com/bchadburn/optimize_routing/actions/workflows/ci.yml/badge.svg)
+
 Multi-period supply chain routing problem comparing three solution approaches:
 global MILP (provably optimal), daily myopic MILP, and tabular Q-learning.
 

@@ -1,6 +1,5 @@
 import logging
 from numbers import Number
-from typing import Dict, Union
 
 from ortools.linear_solver import pywraplp
 
@@ -90,7 +89,7 @@ class IndexedORBoolVariable(IndexedComponent):
                     f"Variable {self._name} at indices {self._index_name}: {index} has value {round(self[index],2)}"
                 )
 
-    def __getitem__(self, index: Union[str, float]) -> float:
+    def __getitem__(self, index: str | float) -> float:
         if self._solved:
             return self._solution[index]
         else:
@@ -283,11 +282,11 @@ class IndexedORContinuousVariable(IndexedComponent):
             ), "Upper bound default must be a number"
         if "lower_bounds" in kwds:
             assert isinstance(
-                kwds["lower_bounds"], Dict
+                kwds["lower_bounds"], dict
             ), "Custom lower bounds must be a dictionary with str | Number | tuple as keys and Number as values"
         if "upper_bounds" in kwds:
             assert isinstance(
-                kwds["upper_bounds"], Dict
+                kwds["upper_bounds"], dict
             ), "Custom upper bounds must be a dictionary with str | Number | tuple as keys and Number as values"
         if "log_cardinality" in kwds:
             assert isinstance(
@@ -307,7 +306,7 @@ class IndexedORContinuousVariable(IndexedComponent):
                     f"Variable {self._name} at indices {self._index_name}: {index} has value {round(self[index],2)}"
                 )
 
-    def __getitem__(self, index: Union[str, tuple]) -> float:
+    def __getitem__(self, index: str | tuple) -> float:
         if self._solved:
             return self._solution[index]
         else:

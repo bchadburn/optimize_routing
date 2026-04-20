@@ -5,7 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from optimizer.run_optimizer import build_supply_chain_data, run_global_milp, run_daily_myopic
+from optimizer.run_optimizer import build_supply_chain_data, run_daily_myopic, run_global_milp
 from rl.agent import QLearningAgent
 from rl.environment import SupplyChainEnv
 from utils.results import write_csv, write_learning_curve, write_policy_table

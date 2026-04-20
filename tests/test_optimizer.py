@@ -1,6 +1,5 @@
-import pytest
-from optimizer.run_optimizer import build_supply_chain_data
 from optimizer.construct_data_objects import SupplyChainData
+from optimizer.run_optimizer import build_supply_chain_data
 
 PARAMS = dict(
     distribution_opening_costs=[350, 320, 375, 400, 550],

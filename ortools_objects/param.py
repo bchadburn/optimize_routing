@@ -1,6 +1,5 @@
 import logging
 from numbers import Number
-from typing import Union
 
 from ortools_objects.component import ORComponent
 from ortools_objects.indexed_component import IndexedComponent
@@ -71,7 +70,7 @@ class IndexedORParam(IndexedComponent):
     def _validate_args(self, args):
         IndexedComponent._validate_args(self, args)
 
-    def _getitem_when_not_present(self, index: Union[str, tuple]) -> float:
+    def _getitem_when_not_present(self, index: str | tuple) -> float:
         """If there is a default value provided, retrieve it for a value that does not exist at index.
         If no default value, return a ValueError.
 

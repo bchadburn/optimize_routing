@@ -1,6 +1,8 @@
 import numpy as np
 import pytest
+
 from rl.agent import QLearningAgent
+
 
 def test_q_table_shape():
     agent = QLearningAgent(num_days=10, num_demand_buckets=3, num_dcs=5)

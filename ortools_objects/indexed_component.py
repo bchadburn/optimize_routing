@@ -1,4 +1,3 @@
-from typing import Union
 
 from ortools_objects.component import ORComponent
 from ortools_objects.set import ORSet
@@ -57,7 +56,7 @@ class IndexedComponent(ORComponent):
         """
         return len(self._data)
 
-    def __contains__(self, idx: Union[str, tuple]) -> bool:
+    def __contains__(self, idx: str | tuple) -> bool:
         """Overrides original contains dunder to find out whether the index is in the data object.
 
         Args:
@@ -68,7 +67,7 @@ class IndexedComponent(ORComponent):
         """
         return idx in self._data
 
-    def __getitem__(self, index: Union[str, tuple]) -> float:
+    def __getitem__(self, index: str | tuple) -> float:
         """Get the value at a given index. If the index is not there, use the get item when not present (can either raise error or return an indexed component's default value)
 
         Args:
@@ -99,7 +98,7 @@ class IndexedComponent(ORComponent):
     def items(self):
         return self._data
 
-    def _getitem_when_not_present(self, index: Union[str, tuple]):
+    def _getitem_when_not_present(self, index: str | tuple):
         """Method to retrieve the value of an item in the indexed component when the index does not exist.
         Here, it raises a value error, but in subclasses, this method is overriden to take the default value
         of a component.

@@ -2,12 +2,12 @@ import json
 import logging
 import os
 import sys
-from typing import Any, Dict, Optional
+from typing import Any
 
 import loguru
 
 
-def serialize(record: Dict[str, Any]) -> str:
+def serialize(record: dict[str, Any]) -> str:
     """
     Serialize a log record into a JSON-formatted string.
 
@@ -35,7 +35,7 @@ def serialize(record: Dict[str, Any]) -> str:
     return json.dumps(default_dict)
 
 
-def create_log_entry(record: Dict[str, Any]) -> str:
+def create_log_entry(record: dict[str, Any]) -> str:
     """
     Create a log entry as a formatted string.
 
@@ -64,7 +64,7 @@ def patching(record):
 
 
 def get_logger(
-    log_process: str = None, log_path: Optional[str] = sys.stderr
+    log_process: str = None, log_path: str | None = sys.stderr
 ) -> logging.Logger:
     """
     Creates a log file and returns a Logger object.

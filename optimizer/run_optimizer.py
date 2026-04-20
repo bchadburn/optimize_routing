@@ -1,7 +1,8 @@
 import logging
+
 import numpy as np
 
-from optimizer.construct_data_objects import SupplyChainData, SimulationParameters
+from optimizer.construct_data_objects import SimulationParameters, SupplyChainData
 
 
 def build_supply_chain_data(
@@ -53,8 +54,9 @@ def run_global_milp(
 
     Returns dict with keys: total_cost, dc_decisions, transport_cost_m_to_d, transport_cost_d_to_c.
     """
-    import utils.log as log
     from ortools.linear_solver import pywraplp
+
+    import utils.log as log
     from optimizer.math_model_declaration import create_math_model
 
     logger = log.get_logger("MILP-Global")
@@ -101,8 +103,9 @@ def run_daily_myopic(
 
     Returns dict with keys: mean_total_cost, std_total_cost, costs_per_simulation.
     """
-    import utils.log as log
     from ortools.linear_solver import pywraplp
+
+    import utils.log as log
     from optimizer.math_model_declaration import create_math_model
 
     logger = log.get_logger("MILP-Daily")

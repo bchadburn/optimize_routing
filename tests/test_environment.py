@@ -1,5 +1,5 @@
 import pytest
-import numpy as np
+
 from optimizer.run_optimizer import build_supply_chain_data
 from rl.environment import SupplyChainEnv
 

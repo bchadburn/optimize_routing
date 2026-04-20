@@ -1,6 +1,3 @@
-from optimizer.or_tools_functions import (
-    convert_expr_to_ortools,
-)
 
 # supply constraints
 def distribution_status_constrained_by_d_to_c_supply(model, distribution_site, time_period, customer):

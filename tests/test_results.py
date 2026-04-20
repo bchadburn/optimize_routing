@@ -1,6 +1,8 @@
-import pytest
 import pandas as pd
+import pytest
+
 from utils.results import write_csv, write_learning_curve, write_policy_table
+
 
 def test_write_csv_creates_file(tmp_path):
     rows = [{"method": "test", "total_cost": 1234.5, "day": 0}]

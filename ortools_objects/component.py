@@ -13,13 +13,12 @@ class ORComponent:
         self._name = kwds.pop("name", str(type(self).__name__))
         if kwds:
             raise ValueError(
-                "Unexpected keyword options found while constructing '%s':\n\t%s"
-                % (type(self).__name__, ",".join(sorted(kwds.keys())))
+                f"Unexpected keyword options found while constructing '{type(self).__name__}':\n\t{','.join(sorted(kwds.keys()))}"
             )
 
         if self._ctype is None:
             raise ValueError(
-                "Must specify a component type for class %s." % (type(self).__name__,)
+                f"Must specify a component type for class {type(self).__name__}."
             )
 
         self._constructed = False

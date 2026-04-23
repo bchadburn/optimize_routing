@@ -22,12 +22,12 @@ RESULTS_DIR = Path("results")
 
 def train_vrp(
     solver_name: str = "ortools",
-    episodes: int = 5_000,
+    episodes: int = 20_000,
     num_days: int = 10,
     decision_rolling_period: int = 3,
     n_vehicles_per_dc: int = 3,
     seed: int = 42,
-    log_interval: int = 500,
+    log_interval: int = 1_000,
 ) -> tuple[QLearningAgent, list[float]]:
     """Train Q-learning agent with VRP sub-solver. Returns (agent, episode_rewards)."""
     solver = _make_solver(solver_name)
@@ -41,8 +41,10 @@ def train_vrp(
         num_demand_buckets=3,
         num_dcs=len(supply_chain_data.distribution_sites),
         seed=seed,
+        epsilon_decay=0.9997,
     )
 
+    rng = np.random.default_rng(seed)
     episode_rewards: list[float] = []
     for ep in range(episodes):
         state = env.reset()
@@ -50,8 +52,11 @@ def train_vrp(
         done = False
         while not done:
             action = agent.select_action(state)
+            if action == 0:
+                action = int(rng.integers(1, agent.num_actions))
             next_state, reward, done = env.step(action)
-            agent.update(state, action, reward, next_state, done)
+            clipped_reward = max(reward, -50_000.0)
+            agent.update(state, action, clipped_reward, next_state, done)
             state = next_state
             total_reward += reward
         agent.decay_epsilon()
@@ -90,6 +95,10 @@ def evaluate_vrp(
         done = False
         while not done:
             action = agent.greedy_action(state)
+            if action == 0:
+                day, bucket, dc_mask = state
+                q_row = agent.q_table[day, bucket, dc_mask]
+                action = int(np.argmax(q_row[1:]) + 1)
             state, reward, done = env.step(action)
             total_cost -= reward
         costs.append(total_cost)

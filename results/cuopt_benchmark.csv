@@ -1,0 +1,6 @@
+n_customers,n_vehicles,solver,solve_time_s,total_cost
+12,2,ortools_vrp,0.015599,126.864
+50,7,ortools_vrp,0.123574,554.612
+100,13,ortools_vrp,0.498636,1154.234
+250,32,ortools_vrp,3.124535,2728.396
+500,63,ortools_vrp,10.057079,5482.346

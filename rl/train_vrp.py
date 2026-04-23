@@ -100,8 +100,10 @@ def _make_solver(solver_name: str):
     if solver_name == "cuopt":
         from rl.solvers.cuopt_vrp import CuOptVrpSolver
         return CuOptVrpSolver()
-    from rl.solvers.ortools_vrp import OrtoolsVrpSolver
-    return OrtoolsVrpSolver()
+    if solver_name == "ortools":
+        from rl.solvers.ortools_vrp import OrtoolsVrpSolver
+        return OrtoolsVrpSolver()
+    raise ValueError(f"Unknown solver: {solver_name!r}. Expected 'ortools' or 'cuopt'.")
 
 
 def run_vrp(solver_name: str = "ortools", episodes: int = 5_000) -> None:

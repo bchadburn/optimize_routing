@@ -13,7 +13,8 @@ def test_benchmark_ortools_writes_csv(tmp_path):
     csv_path = tmp_path / "cuopt_benchmark.csv"
     assert csv_path.exists()
 
-    rows = list(csv.DictReader(csv_path.open()))
+    with csv_path.open() as f:
+        rows = list(csv.DictReader(f))
     assert len(rows) == 1
     assert set(rows[0].keys()) == {"n_customers", "n_vehicles", "solver", "solve_time_s", "total_cost"}
     assert rows[0]["solver"] == "ortools_vrp"

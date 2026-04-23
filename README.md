@@ -61,6 +61,39 @@ results/            Output CSVs (gitignored)
 comparison.ipynb    Comparison notebook
 ```
 
+## cuOpt Experiment — GPU-Accelerated CVRPTW
+
+Replaces the LP flow sub-solver in the RL environment with a proper CVRPTW solver,
+then benchmarks OR-Tools VRP vs NVIDIA cuOpt at 12–500 customers.
+
+**Current status:** OR-Tools VRP baseline complete. cuOpt GPU integration pending
+WSL2 CUDA setup (see [issue #6](https://github.com/bchadburn/optimize_routing/issues/6)).
+
+**Run benchmark (OR-Tools only):**
+```bash
+uv run python -m rl.benchmark
+```
+
+**Train RL with OR-Tools VRP sub-solver:**
+```bash
+uv run python -m rl.train_vrp --solver ortools --episodes 5000
+```
+
+**Train RL with cuOpt (requires GPU + CUDA in WSL2):**
+```bash
+uv run python -m rl.train_vrp --solver cuopt --episodes 5000
+```
+
+Results in `results/cuopt_benchmark.csv`; visualized in `comparison.ipynb` (final section).
+
+**New files:**
+- `rl/solvers/protocol.py` — `CvrptwSolver` protocol (shared interface)
+- `rl/solvers/ortools_vrp.py` — OR-Tools Routing Library VRP solver
+- `rl/solvers/cuopt_vrp.py` — cuOpt CVRPTW solver (pending GPU, see #6)
+- `rl/environment_vrp.py` — `SupplyChainEnvVrp` with pluggable solver
+- `rl/train_vrp.py` — RL training with VRP sub-solver
+- `rl/benchmark.py` — scalability benchmark
+
 ## Further Explorations
 
 - **DQN**: Replace the tabular Q-table with a neural network to handle larger state spaces

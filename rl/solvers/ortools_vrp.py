@@ -74,12 +74,17 @@ def _solve_single_dc_ortools(
     if n == 0:
         return 0.0
 
-    # Scale costs by 1000 to preserve decimal precision in integer matrix
+    # Arc costs are weighted by demand quantity so the VRP objective matches the
+    # LP flow formulation: cost(depot→customer) = transport_cost × demand.
+    # Without this, VRP measures only travel distance (16x cheaper than LP/MILP),
+    # making RL rewards incomparable to the MILP benchmark.
     SCALE = 1000
     size = n + 1
     matrix = [[0] * size for _ in range(size)]
     for i, ci in enumerate(customer_ids, start=1):
-        cost_int = int(costs_to_customers.get(ci, 1e6) * SCALE)
+        # Halved so round-trip (depot→customer→depot) equals LP one-way cost:
+        # LP charges cost × demand once; VRP charges cost × demand / 2 each leg.
+        cost_int = int(costs_to_customers.get(ci, 1e6) * demands[ci] * SCALE / 2)
         matrix[0][i] = cost_int
         matrix[i][0] = cost_int
     for i in range(1, size):

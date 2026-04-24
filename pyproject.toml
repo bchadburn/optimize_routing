@@ -13,6 +13,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.4"]
+# cuopt-sh-client connects to a running cuOpt Docker container via REST.
+# Install: uv pip install --extra-index-url https://pypi.nvidia.com cuopt-sh-client
+cuopt = ["cuopt-sh-client>=26.4"]
 
 [build-system]
 requires = ["hatchling"]

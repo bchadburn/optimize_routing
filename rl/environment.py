@@ -94,11 +94,25 @@ class SupplyChainEnv:
         ]
 
     def _enforce_rolling_window(self, desired_action: int) -> int:
-        """Return the executed action: desired OR forced-open DCs."""
+        """Auto-close expired DCs, then force-keep DCs still within their window.
+
+        Matches MILP semantics: a DC is ON only within the rolling_period days
+        after it was opened. Once the window expires the DC auto-closes; the agent
+        must pay opening_cost again to keep it running for another window.
+        """
+        # Auto-close DCs whose rolling window has expired
+        expired = [
+            dc_id for dc_id, open_day in list(self._open_start.items())
+            if self._day >= open_day + self.rolling_period
+        ]
+        for dc_id in expired:
+            self._dc_status_bitmask &= ~(1 << dc_id)
+            del self._open_start[dc_id]
+
+        # Force-keep DCs still within their rolling window
         self.forced_open_mask = 0
         for dc_id, open_day in self._open_start.items():
-            if self._day < open_day + self.rolling_period:
-                self.forced_open_mask |= (1 << dc_id)
+            self.forced_open_mask |= (1 << dc_id)
         return desired_action | self.forced_open_mask
 
     def _update_dc_status(self, executed_action: int) -> None:

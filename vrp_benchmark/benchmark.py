@@ -60,6 +60,33 @@ def _time_solver(
     return float(np.mean(times)), mean_cost, success
 
 
+def _time_milp(
+    solver,
+    instances: list[CVRPInstance],
+) -> tuple[float, float, float, float, float]:
+    """Return (mean_time_s, mean_cost, success_rate, optimal_rate, mean_gap_pct).
+
+    Reports both the feasible incumbent quality and whether it's proven optimal.
+    gap_pct is the mean optimality gap: (incumbent - lower_bound) / lower_bound * 100.
+    """
+    times, costs, gaps, n_optimal = [], [], [], 0
+    for inst in instances:
+        t0 = time.perf_counter()
+        result = solver.solve_detailed(inst)
+        elapsed = time.perf_counter() - t0
+        times.append(elapsed)
+        costs.append(result.cost)
+        if result.is_optimal:
+            n_optimal += 1
+        if result.gap_pct is not None:
+            gaps.append(result.gap_pct)
+    success = sum(1 for c in costs if c < 1e8) / len(costs)
+    valid_costs = [c for c in costs if c < 1e8]
+    mean_cost = float(np.mean(valid_costs)) if valid_costs else 1e9
+    mean_gap = float(np.mean(gaps)) if gaps else float("nan")
+    return float(np.mean(times)), mean_cost, success, n_optimal / len(instances), mean_gap
+
+
 def run(
     customer_counts: list[int],
     include_milp: bool = False,
@@ -74,9 +101,10 @@ def run(
         "ortools": ORToolsSolver(time_limit_s=ortools_time_s),
     }
 
+    milp_solver = None
     if include_milp:
         from vrp_benchmark.solvers.milp import MILPSolver
-        solvers["milp_exact"] = MILPSolver(time_limit_s=milp_time_s)
+        milp_solver = MILPSolver(time_limit_s=milp_time_s)
 
     if include_cuopt:
         try:
@@ -102,19 +130,29 @@ def run(
         else:
             print(f"  (no DQN model for n={n} — run train_dqn.py first)")
 
-        # Collect all results first, then compute gaps vs the best available reference.
-        # Reference priority: MILP exact (proven optimal) > OR-Tools > Greedy.
-        # Gap vs a non-exact reference is labelled accordingly in the CSV.
-        results: dict[str, tuple[float, float, float]] = {}
         print(f"\nn={n} customers ({n_eval} instances each):")
+
+        # Run MILP separately to capture gap info
+        milp_result: tuple | None = None
+        if milp_solver is not None:
+            milp_result = _time_milp(milp_solver, instances)
+            mt, mc, ms, opt_rate, mgap = milp_result
+            cost_str = f"{mc:8.4f}" if mc < 1e8 else "    FAIL"
+            gap_str = f"opt_gap={mgap:+5.1f}%" if not np.isnan(mgap) else "opt_gap=    -"
+            print(
+                f"  {'milp':<14} time={mt*1000:8.1f}ms  cost={cost_str}  "
+                f"{gap_str}  optimal={opt_rate:.0%}  success={ms:.0%}"
+            )
+
+        # Run all other solvers
+        results: dict[str, tuple[float, float, float]] = {}
         for name, solver in active_solvers.items():
             mean_time, mean_cost, success = _time_solver(solver, instances)
             results[name] = (mean_time, mean_cost, success)
 
-        # Choose gap reference: MILP if it succeeded (all instances proven optimal),
-        # otherwise OR-Tools, otherwise greedy.
-        if "milp_exact" in results and results["milp_exact"][2] == 1.0:
-            ref_name, ref_cost = "milp_exact", results["milp_exact"][1]
+        # Choose gap reference: MILP if all instances proven optimal, else OR-Tools, else greedy
+        if milp_result is not None and milp_result[3] == 1.0:  # opt_rate == 1.0
+            ref_name, ref_cost = "milp_exact", milp_result[1]
         elif "ortools" in results:
             ref_name, ref_cost = "ortools", results["ortools"][1]
         else:
@@ -130,6 +168,8 @@ def run(
                 f"gap_vs_{ref_name}_pct": round(gap, 2) if mean_cost < 1e8 else None,
                 "success_rate": round(success, 3),
                 "gap_reference": ref_name,
+                "milp_opt_gap_pct": None,
+                "milp_optimal_rate": None,
             })
             cost_str = f"{mean_cost:8.4f}" if mean_cost < 1e8 else "    FAIL"
             gap_str = f"{gap:+6.1f}%" if mean_cost < 1e8 else "      -"
@@ -139,9 +179,29 @@ def run(
                 f"success={success:.0%}"
             )
 
+        # Add MILP row
+        if milp_result is not None:
+            mt, mc, ms, opt_rate, mgap = milp_result
+            gap = (mc - ref_cost) / ref_cost * 100 if ref_cost < 1e8 and mc < 1e8 else float("nan")
+            label = "milp_exact" if opt_rate == 1.0 else "milp_feasible"
+            rows.append({
+                "n_customers": n,
+                "solver": label,
+                "mean_time_s": round(mt, 4),
+                "mean_cost": round(mc, 4) if mc < 1e8 else None,
+                f"gap_vs_{ref_name}_pct": round(gap, 2) if mc < 1e8 else None,
+                "success_rate": round(ms, 3),
+                "gap_reference": ref_name,
+                "milp_opt_gap_pct": round(mgap, 2) if not np.isnan(mgap) else None,
+                "milp_optimal_rate": round(opt_rate, 3),
+            })
+
     out_path = RESULTS_DIR / "vrp_benchmark.csv"
-    fieldnames = ["n_customers", "solver", "mean_time_s", "mean_cost", "gap_vs_milp_exact_pct",
-                  "gap_vs_ortools_pct", "gap_vs_greedy_pct", "success_rate", "gap_reference"]
+    fieldnames = [
+        "n_customers", "solver", "mean_time_s", "mean_cost",
+        "gap_vs_milp_exact_pct", "gap_vs_ortools_pct", "gap_vs_greedy_pct",
+        "success_rate", "gap_reference", "milp_opt_gap_pct", "milp_optimal_rate",
+    ]
     with out_path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

@@ -101,14 +101,18 @@ OR-Tools is capped at its 5s time limit at every size. cuOpt grows from 10s (sma
 | n > 500 or latency < 100ms required | Greedy (or attention-model RL) |
 
 ```bash
-# Run benchmark (requires cuOpt server for --cuopt flag)
+# Run synthetic benchmark (requires cuOpt server for --cuopt flag)
 uv run python -m vrp_benchmark.benchmark --counts 10 20 50 100 250 500 --milp --cuopt
+
+# Run real-instance benchmark vs published best-known solutions
+uv run python -m vrp_benchmark.benchmark_real --cuopt
 
 # Train DQN (illustrates architecture limitations)
 uv run python -m vrp_benchmark.train_dqn --n 10 --episodes 200000
 
-# Full results and plots
-jupyter lab vrp_benchmark/results.ipynb
+# Results notebooks
+jupyter lab vrp_benchmark/results.ipynb           # synthetic + MILP gap analysis
+jupyter lab vrp_benchmark/results_real.ipynb      # real instances vs BKS
 ```
 
 ### cuOpt Server Setup
@@ -131,15 +135,19 @@ rl/                     Supply chain RL environment, Q-learning agent, training
   solvers/              Pluggable CVRP solvers used in VRP sub-problem
 vrp_benchmark/          Standalone CVRP benchmark (Experiment 2)
   data.py               CVRPInstance, generate_instance (100×100 km grid)
-  benchmark.py          Benchmark runner → results/vrp_benchmark.csv
+  benchmark.py          Synthetic benchmark runner → results/vrp_benchmark.csv
+  benchmark_real.py     Real-instance benchmark vs BKS → results/real_benchmark.csv
   train_dqn.py          DQN training CLI
-  results.ipynb         Results notebook with plots and decision matrix
+  results.ipynb         Synthetic results: quality/time plots, MILP gap, decision matrix
+  results_real.ipynb    Real results: gap vs published BKS, instance analysis
   solvers/
     milp.py             CP-SAT exact solver with circuit constraints + opt-gap reporting
     ortools_vrp.py      OR-Tools Guided Local Search
     cuopt_vrp.py        NVIDIA cuOpt via self-hosted REST API
     greedy.py           Nearest-neighbor baseline
     dqn.py              DQN flat-MLP (educational — not competitive)
+  datasets/
+    uchoa.py            Uchoa et al. X-instance loader (downloads + caches from GitHub)
 results/                Benchmark plots (PNG)
 tests/                  Pytest suite
 ```
@@ -152,11 +160,37 @@ uv run pytest tests/ -v
 jupyter lab vrp_benchmark/results.ipynb
 ```
 
+## Experiment 3 — Real Instances: Gap vs Best-Known Solutions (Uchoa et al.)
+
+Benchmarking against **published BKS** from the Uchoa et al. (2017) X-instance dataset —
+the standard modern CVRP benchmark. Instances auto-download on first run.
+
+| Instance | n | BKS | Greedy | OR-Tools (30s) | cuOpt (30s) |
+|----------|---|-----|--------|----------------|-------------|
+| X-n101-k25 | 100 | 27,591 | +50.5% | +5.0% | +33.2% ⚠️ |
+| X-n115-k10 | 114 | 12,747 | +43.3% | +2.6% | **+0.1%** |
+| X-n139-k10 | 138 | 13,590 | +30.0% | +9.5% | **+0.2%** |
+| X-n162-k11 | 161 | 14,138 | +24.1% | +4.4% | **+0.3%** |
+| X-n200-k36 | 199 | 58,578 | +18.4% | +4.1% | **+1.2%** |
+
+⚠️ X-n101-k25 anomaly: 25 vehicles with tight capacity creates dense overlapping routes — cuOpt
+GPU search degrades on high vehicle-count instances. OR-Tools handles it better (+5% vs +33%).
+
+On the other 4 instances cuOpt matches or approaches published BKS (0.1–1.2%) — comparable
+to production solvers. OR-Tools is consistent at 2.6–9.5% with no instance-specific pathology.
+
+```bash
+uv run python -m vrp_benchmark.benchmark_real --cuopt
+jupyter lab vrp_benchmark/results_real.ipynb
+```
+
+---
+
 ## Next Steps
 
-- **Solomon benchmark instances** — Load standard C1/R1/RC1 instances (100 customers,
-  published optimal solutions) to measure exact % above known optimum
+- **Time windows (CVRPTW)** — Extend solvers to enforce time window constraints and rerun
+  on Solomon C1/R1/RC1 instances (100 customers, published optimal solutions)
 - **Attention Model RL** — Replace flat-MLP DQN with Kool et al. (2019) encoder-decoder;
   achieves 1–3% above OR-Tools at n=100 with <10ms inference
-- **Time windows (CVRPTW)** — Solomon instances include time windows; extend solvers
-  to enforce them and rerun the same comparison
+- **cuOpt high-k fix** — Investigate cuOpt configuration for high vehicle-count instances
+  (X-n101-k25 style); may need fleet size tuning in the REST payload

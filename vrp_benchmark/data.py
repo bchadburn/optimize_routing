@@ -1,7 +1,8 @@
 """CVRP instance generator and data types.
 
-Generates random instances in the unit square with uniform demand.
-All instances use a single depot at (0.5, 0.5).
+Generates random instances in a 100×100 grid with uniform demand.
+Coordinates represent km; depot is at (50, 50). Costs are in km.
+All instances use a single depot at (50, 50).
 """
 from __future__ import annotations
 
@@ -66,9 +67,9 @@ def generate_instance(
         A CVRPInstance with n_customers customers.
     """
     rng = np.random.default_rng(seed)
-    coords = rng.uniform(0.0, 1.0, size=(n_customers, 2))
+    coords = rng.uniform(0.0, 100.0, size=(n_customers, 2))
     demands = rng.integers(demand_range[0], demand_range[1] + 1, size=n_customers)
-    depot = np.array([0.5, 0.5])
+    depot = np.array([50.0, 50.0])
     # Minimum vehicles needed: ceil(total_demand / capacity)
     n_vehicles = int(np.ceil(demands.sum() / capacity)) + 1
     return CVRPInstance(

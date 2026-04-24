@@ -65,20 +65,23 @@ def run(
     include_milp: bool = False,
     include_cuopt: bool = False,
     n_eval: int = N_EVAL,
+    ortools_time_s: int = 30,
+    milp_time_s: int = 60,
+    cuopt_time_s: int = 10,
 ) -> None:
     solvers: dict[str, object] = {
         "greedy": GreedySolver(),
-        "ortools": ORToolsSolver(time_limit_s=120),
+        "ortools": ORToolsSolver(time_limit_s=ortools_time_s),
     }
 
     if include_milp:
         from vrp_benchmark.solvers.milp import MILPSolver
-        solvers["milp_exact"] = MILPSolver(time_limit_s=120)
+        solvers["milp_exact"] = MILPSolver(time_limit_s=milp_time_s)
 
     if include_cuopt:
         try:
             from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
-            solvers["cuopt"] = CuOptSolver(time_limit_s=10)
+            solvers["cuopt"] = CuOptSolver(time_limit_s=cuopt_time_s)
         except Exception as e:
             print(f"WARNING: cuOpt unavailable: {e}")
 
@@ -152,5 +155,16 @@ if __name__ == "__main__":
     parser.add_argument("--milp", action="store_true")
     parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--n-eval", type=int, default=N_EVAL)
+    parser.add_argument("--ortools-time", type=int, default=30, help="OR-Tools time limit (s)")
+    parser.add_argument("--milp-time", type=int, default=60, help="MILP time limit (s)")
+    parser.add_argument("--cuopt-time", type=int, default=10, help="cuOpt time limit (s)")
     args = parser.parse_args()
-    run(args.counts, include_milp=args.milp, include_cuopt=args.cuopt, n_eval=args.n_eval)
+    run(
+        args.counts,
+        include_milp=args.milp,
+        include_cuopt=args.cuopt,
+        n_eval=args.n_eval,
+        ortools_time_s=args.ortools_time,
+        milp_time_s=args.milp_time,
+        cuopt_time_s=args.cuopt_time,
+    )

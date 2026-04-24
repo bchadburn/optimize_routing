@@ -66,12 +66,26 @@ comparison.ipynb    Comparison notebook
 Replaces the LP flow sub-solver in the RL environment with a proper CVRPTW solver,
 then benchmarks OR-Tools VRP vs NVIDIA cuOpt at 12–500 customers.
 
-**Current status:** OR-Tools VRP baseline complete. cuOpt GPU integration pending
-WSL2 CUDA setup (see [issue #6](https://github.com/bchadburn/optimize_routing/issues/6)).
+`CuOptVrpSolver` uses the cuOpt self-hosted REST API (`cuopt_sh_client`) rather than
+the local cuOpt Python library. This avoids RAPIDS/CUDA version conflicts and works
+with the project's Python 3.12 + pandas 3.x stack.
 
-**Run benchmark (OR-Tools only):**
+### Setup
+
+**1. Install the client:**
 ```bash
-uv run python -m rl.benchmark
+uv pip install --extra-index-url https://pypi.nvidia.com cuopt-sh-client
+```
+
+**2. Start the cuOpt server (requires Docker + NVIDIA GPU):**
+```bash
+docker run --gpus all -p 5000:5000 \
+  nvcr.io/nvidia/cuopt/cuopt:25.02
+```
+
+**3. Run the benchmark:**
+```bash
+uv run python -m rl.benchmark --cuopt
 ```
 
 **Train RL with OR-Tools VRP sub-solver:**
@@ -79,17 +93,17 @@ uv run python -m rl.benchmark
 uv run python -m rl.train_vrp --solver ortools --episodes 5000
 ```
 
-**Train RL with cuOpt (requires GPU + CUDA in WSL2):**
+**Train RL with cuOpt:**
 ```bash
 uv run python -m rl.train_vrp --solver cuopt --episodes 5000
 ```
 
 Results in `results/cuopt_benchmark.csv`; visualized in `comparison.ipynb` (final section).
 
-**New files:**
+**Solver files:**
 - `rl/solvers/protocol.py` — `CvrptwSolver` protocol (shared interface)
 - `rl/solvers/ortools_vrp.py` — OR-Tools Routing Library VRP solver
-- `rl/solvers/cuopt_vrp.py` — cuOpt CVRPTW solver (pending GPU, see #6)
+- `rl/solvers/cuopt_vrp.py` — cuOpt CVRPTW solver (self-hosted REST client)
 - `rl/environment_vrp.py` — `SupplyChainEnvVrp` with pluggable solver
 - `rl/train_vrp.py` — RL training with VRP sub-solver
 - `rl/benchmark.py` — scalability benchmark

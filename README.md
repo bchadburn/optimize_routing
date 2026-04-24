@@ -22,6 +22,11 @@ Minimize DC opening costs + transportation costs over the planning horizon.
 proof-of-concept of hierarchical RL decomposition — the agent handles binary DC-open
 decisions while an LP optimally routes flow given those decisions.
 
+**Why not cuOpt here?** The routing subproblem is a multi-echelon flow (plant → DC → customer)
+with soft demand allocation, not a standard CVRP. cuOpt solves CVRP/VRPTW; it can't express
+the DC-open binary decisions or the multi-echelon cost structure. Experiments 2–3 isolate
+the pure CVRP routing layer where cuOpt applies directly.
+
 ```bash
 uv run python -m rl.train          # reproduce results
 jupyter lab comparison.ipynb       # full comparison + learning curve

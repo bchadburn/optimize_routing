@@ -143,13 +143,13 @@ def run(
             else:
                 milp_result = _time_milp(milp_solver, instances)
                 milp_cumulative_s += milp_result[0] * len(instances)
-            mt, mc, ms, opt_rate, mgap = milp_result
-            cost_str = f"{mc:8.4f}" if mc < 1e8 else "    FAIL"
-            gap_str = f"opt_gap={mgap:+5.1f}%" if not np.isnan(mgap) else "opt_gap=    -"
-            print(
-                f"  {'milp':<14} time={mt*1000:8.1f}ms  cost={cost_str}  "
-                f"{gap_str}  optimal={opt_rate:.0%}  success={ms:.0%}"
-            )
+                mt, mc, ms, opt_rate, mgap = milp_result
+                cost_str = f"{mc:8.4f}" if mc < 1e8 else "    FAIL"
+                gap_str = f"opt_gap={mgap:+5.1f}%" if not np.isnan(mgap) else "opt_gap=    -"
+                print(
+                    f"  {'milp':<14} time={mt*1000:8.1f}ms  cost={cost_str}  "
+                    f"{gap_str}  optimal={opt_rate:.0%}  success={ms:.0%}"
+                )
 
         # Run all other solvers
         results: dict[str, tuple[float, float, float]] = {}

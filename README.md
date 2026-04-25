@@ -45,34 +45,35 @@ grid, vehicle capacity = 50 units. Minimize total route distance (km).
 |---|-------------|--------------|-------------|--------|-----|
 | 10 | **310 km** ✓ optimal | 310 km (+0%) | 310 km (+0%) | 372 km (+20%) | 553 km (+79%) |
 | 20 | 460 km (29% opt-gap) | 460 km | **460 km** (−0.1%) | 615 km (+34%) | 1,058 km (+130%) |
-| 30 | 602 km (63% opt-gap) | 583 km | **577 km** (−1.1%) | 798 km (+37%) | 1,656 km (+184%) |
-| 50 | — (timeout, no progress) | 845 km | **810 km** (−4.2%) | 1,182 km (+40%) | 2,724 km (+222%) |
-| 100 | — (timeout) | 1,532 km | **1,372 km** (−10.5%) | 1,963 km (+28%) | — |
-| 250 | — (timeout) | 3,353 km | **2,968 km** (−11.5%) | 3,917 km (+17%) | — |
-| 500 | — (timeout) | 6,476 km | **5,542 km** (−14.4%) | 6,941 km (+7%) | — |
+| 30 | 588 km (61% opt-gap) | 583 km | **577 km** (−1.1%) | 798 km (+37%) | 1,656 km (+184%) |
+| 50 | — (budget exhausted) | 842 km | **808 km** (−4.0%) | 1,182 km (+40%) | 2,724 km (+224%) |
+| 100 | — | 1,503 km | **1,361 km** (−9.5%) | 1,963 km (+31%) | — |
+| 250 | — | 3,263 km | **2,960 km** (−9.3%) | 3,917 km (+20%) | — |
+| 500 | — | 6,344 km | **5,534 km** (−12.8%) | 6,941 km (+9%) | — |
 
-✓ = proven globally optimal by CP-SAT
+✓ = proven globally optimal by CP-SAT. MILP runs with a 300s per-instance limit and a 1hr total budget; n≥50 exceeded the budget and was skipped.
 
 **Solve time** (mean per instance):
 
 | n | MILP | OR-Tools | cuOpt | Greedy | DQN |
 |---|------|----------|-------|--------|-----|
-| 10 | 43s | 5s | 16s | <1ms | 5ms |
-| 20 | 300s (timeout) | 5s | 10s | <1ms | — |
-| 50 | — | 5s | 12s | 3ms | 120ms |
-| 100 | — (timeout) | 5s | 15s | 8ms | — |
-| 250 | — (timeout) | 5s | 19s | 60ms | — |
-| 500 | — (timeout) | 5s | 27s | 88ms | — |
+| 10 | 22s | 5s | 5s | <1ms | 4ms |
+| 20 | 300s (timeout) | 5s | 11s | <1ms | 6ms |
+| 30 | 300s (timeout) | 5s | 11s | <1ms | 10ms |
+| 50 | — | 5s | 11s | <1ms | 19ms |
+| 100 | — | 5s | 12s | 4ms | — |
+| 250 | — | 5s | 15s | 19ms | — |
+| 500 | — | 5s | 20s | 79ms | — |
 
-OR-Tools is capped at its 5s time limit at every size. cuOpt grows from 10s (small, REST overhead dominated) to 27s (n=500, compute dominated). Greedy is 3–4 orders of magnitude faster than either.
+OR-Tools is capped at its 5s time limit at every size. cuOpt grows from 5s (small, near-instant solve) to 20s (n=500, compute dominated). Greedy is 3–4 orders of magnitude faster than either.
 
 ### Key Findings
 
 **MILP (CP-SAT with circuit constraints)**
-- Proves global optimality at n≤10 in ~35–43s; used as the ground-truth reference for that size
-- At n=20–30: times out after 300s but returns a feasible incumbent with a reported optimality gap (29–63%). That incumbent matches OR-Tools/cuOpt — so all three are likely within 1–2% of true optimal
-- **Not shown at n≥50:** MILP makes no progress in 300s beyond n=30. Branch-and-bound cannot handle the exponential search space at that scale; CP-SAT's arc-flow lower bounds are too weak to prune effectively
-- The "opt-gap" measures lower-bound weakness, not solution quality
+- Proves global optimality at n≤10 in ~22s; used as the ground-truth reference for that size
+- At n=20–30: times out after 300s but returns a feasible incumbent — 460 km and 588 km respectively. These match OR-Tools/cuOpt closely, so all three are likely within 1–2% of true optimal
+- **Not run at n≥50:** cumulative 1hr budget exhausted after n=30. CP-SAT's lower bounds are too weak to prune the search space at larger scales regardless of time given
+- The reported "opt-gap" (29–61%) measures lower-bound weakness, not solution quality
 
 **OR-Tools Guided Local Search**
 - Near-optimal quality at all sizes tested

@@ -45,6 +45,7 @@ def _solve(solver, inst: VRPTWInstance) -> tuple[float, int, bool, float]:
 def run(
     instance_names: list[str],
     include_cuopt: bool = False,
+    nim_mode: bool = False,
     ortools_time_s: int = 30,
     cuopt_time_s: int = 30,
 ) -> None:
@@ -56,7 +57,7 @@ def run(
     if include_cuopt:
         try:
             from vrp_benchmark.solvers.cuopt_tw import CuOptVRPTWSolver
-            solvers["cuopt"] = CuOptVRPTWSolver(time_limit_s=cuopt_time_s)
+            solvers["cuopt"] = CuOptVRPTWSolver(time_limit_s=cuopt_time_s, mode="nim" if nim_mode else "self-hosted")
         except Exception as e:
             print(f"WARNING: cuOpt unavailable: {e}")
 
@@ -125,6 +126,7 @@ if __name__ == "__main__":
                         help="Run all instances in a family (e.g. C1 R1 RC2)")
     parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--ortools-time", type=int, default=30)
+    parser.add_argument("--nim", action="store_true", help="Use NVIDIA NIM cloud API instead of self-hosted (set NVIDIA_API_KEY)")
     parser.add_argument("--cuopt-time", type=int, default=30)
     args = parser.parse_args()
 
@@ -139,5 +141,5 @@ if __name__ == "__main__":
     else:
         names = DEFAULT_INSTANCES
 
-    run(names, include_cuopt=args.cuopt,
+    run(names, include_cuopt=args.cuopt, nim_mode=args.nim,
         ortools_time_s=args.ortools_time, cuopt_time_s=args.cuopt_time)

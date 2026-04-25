@@ -1,4 +1,4 @@
-"""cuOpt VRPTW solver via self-hosted REST API.
+"""cuOpt VRPTW solver — self-hosted Docker or NVIDIA NIM cloud API.
 
 Extends the CVRP solver with time window fields:
   - travel_time_matrix_data: same as cost matrix for Solomon (speed=1)
@@ -6,31 +6,57 @@ Extends the CVRP solver with time window fields:
   - task_data.service_times: [service_time, ...] per customer
   - fleet_data.vehicle_time_windows: [[depot_ready, depot_due]] per vehicle
 
-cuOpt time window semantics match Solomon directly:
-  task_time_windows[i] = [earliest_arrival, latest_arrival]
-  = Solomon's [ready_time, due_date]
-
-Requires a running cuOpt server:
-    docker run --gpus all -p 5000:5000 nvcr.io/nvidia/cuopt/cuopt:26.4.0-cuda12.9-py3.13
+Two modes:
+  mode="self-hosted"  Requires a running cuOpt Docker container.
+  mode="nim"          Uses the NVIDIA NIM API (reads NVIDIA_API_KEY from env).
+                      Get a free key at: https://build.nvidia.com/nvidia/cuopt
 """
 from __future__ import annotations
 
+import os
+
 from vrp_benchmark.data_tw import VRPTWInstance, route_cost_tw
+
+_NIM_ENDPOINT = "https://integrate.api.nvidia.com/v1/cuopt"
 
 
 class CuOptVRPTWSolver:
-    """VRPTW solver using NVIDIA cuOpt self-hosted service."""
+    """VRPTW solver using NVIDIA cuOpt (self-hosted or NIM cloud API)."""
 
     def __init__(
         self,
+        mode: str = "self-hosted",
         host: str = "localhost",
         port: int = 5000,
         time_limit_s: int = 30,
+        api_key: str | None = None,
     ) -> None:
-        from cuopt_sh_client import CuOptServiceSelfHostClient
-
-        self._client = CuOptServiceSelfHostClient(ip=host, port=port, polling_timeout=None)
         self._time_limit_s = time_limit_s
+        self._mode = mode
+        if mode == "nim":
+            self._api_key = api_key or os.environ.get("NVIDIA_API_KEY", "")
+            if not self._api_key:
+                raise ValueError("NIM mode requires NVIDIA_API_KEY env var or api_key argument")
+            self._client = None
+        else:
+            from cuopt_sh_client import CuOptServiceSelfHostClient
+            self._client = CuOptServiceSelfHostClient(ip=host, port=port, polling_timeout=None)
+
+    def _request_nim(self, problem_data: dict) -> dict:
+        import json
+        import urllib.request
+        body = json.dumps({"action": "cuOpt_OptimizedRouting", "data": problem_data}).encode()
+        req = urllib.request.Request(
+            _NIM_ENDPOINT,
+            data=body,
+            headers={
+                "Authorization": f"Bearer {self._api_key}",
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read())
 
     def solve(self, instance: VRPTWInstance) -> tuple[list[list[int]], float]:
         n = instance.n_customers
@@ -62,9 +88,14 @@ class CuOptVRPTWSolver:
         }
 
         try:
-            response = self._client.get_optimized_routes(problem_data)
-            solver_resp = response["response"]["solver_response"]
-            if solver_resp["status"] != 0:
+            if self._mode == "nim":
+                response = self._request_nim(problem_data)
+                solver_resp = response.get("response", {}).get("solver_response", response)
+            else:
+                response = self._client.get_optimized_routes(problem_data)
+                solver_resp = response["response"]["solver_response"]
+
+            if solver_resp.get("status", -1) != 0:
                 return [], 1e9
 
             routes: list[list[int]] = []

@@ -2,8 +2,9 @@
 
 ![CI](https://github.com/bchadburn/optimize_routing/actions/workflows/ci.yml/badge.svg)
 
-Two complementary experiments comparing fundamentally different approaches to combinatorial
-routing problems — from exact solvers to GPU-accelerated heuristics to reinforcement learning.
+Four experiments comparing fundamentally different approaches to combinatorial routing problems —
+from exact solvers to GPU-accelerated heuristics to reinforcement learning, across both CVRP
+and VRPTW problem classes.
 
 ---
 
@@ -121,15 +122,52 @@ jupyter lab vrp_benchmark/results.ipynb           # synthetic + MILP gap analysi
 jupyter lab vrp_benchmark/results_real.ipynb      # real instances vs BKS
 ```
 
-### cuOpt Server Setup
+### cuOpt Setup
+
+cuOpt requires a running server. Two paths depending on your environment:
+
+#### Path A — Self-hosted (local machine with NVIDIA GPU)
 
 ```bash
-# Requires Docker + NVIDIA GPU
+# 1. Start the cuOpt container (requires Docker + NVIDIA GPU + nvidia-container-toolkit)
 docker run --gpus all -p 5000:5000 nvcr.io/nvidia/cuopt/cuopt:26.4.0-cuda12.9-py3.13
 
-# Install REST client (works with Python 3.12+)
+# 2. Install the REST client
 uv pip install --extra-index-url https://pypi.nvidia.com cuopt-sh-client
+
+# 3. Run benchmarks
+uv run python -m vrp_benchmark.benchmark --cuopt
+uv run python -m vrp_benchmark.benchmark_real --cuopt
+uv run python -m vrp_benchmark.benchmark_solomon --cuopt
 ```
+
+#### Path B — NVIDIA NIM API (no local GPU required; works from Colab)
+
+NVIDIA hosts cuOpt as a managed API with free trial credits:
+
+1. Sign up at [build.nvidia.com/nvidia/cuopt](https://build.nvidia.com/nvidia/cuopt) and generate an API key
+2. Set the key as an environment variable:
+
+```bash
+export NVIDIA_API_KEY=nvapi-xxxx
+```
+
+3. Run benchmarks with `--nim` flag:
+
+```bash
+uv run python -m vrp_benchmark.benchmark --cuopt --nim
+uv run python -m vrp_benchmark.benchmark_real --cuopt --nim
+uv run python -m vrp_benchmark.benchmark_solomon --cuopt --nim
+```
+
+Or in Python:
+```python
+from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
+solver = CuOptSolver(mode="nim")  # reads NVIDIA_API_KEY from environment
+```
+
+The NIM API uses the same request format as self-hosted; only the endpoint and auth differ.
+See `colab_benchmark.ipynb` for a fully-runnable Colab example.
 
 ---
 

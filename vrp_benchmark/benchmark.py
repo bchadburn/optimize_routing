@@ -93,7 +93,8 @@ def run(
     include_cuopt: bool = False,
     n_eval: int = N_EVAL,
     ortools_time_s: int = 30,
-    milp_time_s: int = 60,
+    milp_time_s: int = 300,
+    milp_budget_s: int = 3600,
     cuopt_time_s: int = 10,
 ) -> None:
     solvers: dict[str, object] = {
@@ -102,6 +103,7 @@ def run(
     }
 
     milp_solver = None
+    milp_cumulative_s: float = 0.0  # tracks total wall time spent on MILP
     if include_milp:
         from vrp_benchmark.solvers.milp import MILPSolver
         milp_solver = MILPSolver(time_limit_s=milp_time_s)
@@ -133,9 +135,14 @@ def run(
         print(f"\nn={n} customers ({n_eval} instances each):")
 
         # Run MILP separately to capture gap info
+        # Stop running MILP once the cumulative wall time would exceed the budget.
         milp_result: tuple | None = None
         if milp_solver is not None:
-            milp_result = _time_milp(milp_solver, instances)
+            if milp_cumulative_s >= milp_budget_s:
+                print(f"  (MILP skipped — cumulative budget {milp_budget_s}s exhausted)")
+            else:
+                milp_result = _time_milp(milp_solver, instances)
+                milp_cumulative_s += milp_result[0] * len(instances)
             mt, mc, ms, opt_rate, mgap = milp_result
             cost_str = f"{mc:8.4f}" if mc < 1e8 else "    FAIL"
             gap_str = f"opt_gap={mgap:+5.1f}%" if not np.isnan(mgap) else "opt_gap=    -"
@@ -216,7 +223,8 @@ if __name__ == "__main__":
     parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--n-eval", type=int, default=N_EVAL)
     parser.add_argument("--ortools-time", type=int, default=30, help="OR-Tools time limit (s)")
-    parser.add_argument("--milp-time", type=int, default=60, help="MILP time limit (s)")
+    parser.add_argument("--milp-time", type=int, default=300, help="MILP per-instance time limit (s)")
+    parser.add_argument("--milp-budget", type=int, default=3600, help="Total MILP wall-time budget (s); stops at the n that would exceed it")
     parser.add_argument("--cuopt-time", type=int, default=10, help="cuOpt time limit (s)")
     args = parser.parse_args()
     run(
@@ -226,5 +234,6 @@ if __name__ == "__main__":
         n_eval=args.n_eval,
         ortools_time_s=args.ortools_time,
         milp_time_s=args.milp_time,
+        milp_budget_s=args.milp_budget,
         cuopt_time_s=args.cuopt_time,
     )

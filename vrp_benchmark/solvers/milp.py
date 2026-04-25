@@ -10,7 +10,7 @@ Result quality:
   - status FEASIBLE → best incumbent found within time limit; gap is reported
   - status INFEASIBLE / no solution → returns ([], 1e9, None)
 
-Practical limits with a 120s time limit:
+Practical limits with a 300s time limit:
   - n ≤ 15  : usually OPTIMAL
   - n = 20  : often OPTIMAL or tight FEASIBLE (gap < 5%)
   - n = 30  : FEASIBLE with 5–15% gap typical
@@ -46,7 +46,7 @@ class MILPSolver:
     solve() returns (routes, cost) for protocol compatibility; cost is 1e9 on failure.
     """
 
-    def __init__(self, time_limit_s: int = 120) -> None:
+    def __init__(self, time_limit_s: int = 300) -> None:
         self._time_limit_s = time_limit_s
 
     def solve(self, instance: CVRPInstance) -> tuple[list[list[int]], float]:

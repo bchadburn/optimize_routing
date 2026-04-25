@@ -7,8 +7,6 @@ at a customer if they arrive before its ready_time.
 """
 from __future__ import annotations
 
-import numpy as np
-
 from vrp_benchmark.data_tw import VRPTWInstance
 
 

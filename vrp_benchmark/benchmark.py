@@ -12,15 +12,17 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import csv
 import time
 from pathlib import Path
 
 import numpy as np
 
+from vrp_benchmark._bench_util import add_cuopt_args, init_cuopt_solver, write_csv
 from vrp_benchmark.data import CVRPInstance, generate_instance
+from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
 from vrp_benchmark.solvers.greedy import GreedySolver
 from vrp_benchmark.solvers.ortools_vrp import ORToolsSolver
+from vrp_benchmark.solvers.protocol import CVRPSolver
 
 RESULTS_DIR = Path("results")
 MODELS_DIR = Path("vrp_benchmark/models")
@@ -98,7 +100,7 @@ def run(
     milp_budget_s: int = 3600,
     cuopt_time_s: int = 10,
 ) -> None:
-    solvers: dict[str, object] = {
+    solvers: dict[str, CVRPSolver] = {
         "greedy": GreedySolver(),
         "ortools": ORToolsSolver(time_limit_s=ortools_time_s),
     }
@@ -109,14 +111,10 @@ def run(
         from vrp_benchmark.solvers.milp import MILPSolver
         milp_solver = MILPSolver(time_limit_s=milp_time_s)
 
-    if include_cuopt:
-        try:
-            from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
-            solvers["cuopt"] = CuOptSolver(time_limit_s=cuopt_time_s, mode="nim" if nim_mode else "self-hosted")
-        except Exception as e:
-            print(f"WARNING: cuOpt unavailable: {e}")
+    cuopt = init_cuopt_solver(include_cuopt, nim_mode, cuopt_time_s, CuOptSolver)
+    if cuopt:
+        solvers["cuopt"] = cuopt
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
 
     for n in customer_counts:
@@ -173,9 +171,9 @@ def run(
                 "solver": name,
                 "mean_time_s": round(mean_time, 4),
                 "mean_cost": round(mean_cost, 4) if mean_cost < 1e8 else None,
-                f"gap_vs_{ref_name}_pct": round(gap, 2) if mean_cost < 1e8 else None,
-                "success_rate": round(success, 3),
+                "gap_vs_ref_pct": round(gap, 2) if mean_cost < 1e8 else None,
                 "gap_reference": ref_name,
+                "success_rate": round(success, 3),
                 "milp_opt_gap_pct": None,
                 "milp_optimal_rate": None,
             })
@@ -197,9 +195,9 @@ def run(
                 "solver": label,
                 "mean_time_s": round(mt, 4),
                 "mean_cost": round(mc, 4) if mc < 1e8 else None,
-                f"gap_vs_{ref_name}_pct": round(gap, 2) if mc < 1e8 else None,
-                "success_rate": round(ms, 3),
+                "gap_vs_ref_pct": round(gap, 2) if mc < 1e8 else None,
                 "gap_reference": ref_name,
+                "success_rate": round(ms, 3),
                 "milp_opt_gap_pct": round(mgap, 2) if not np.isnan(mgap) else None,
                 "milp_optimal_rate": round(opt_rate, 3),
             })
@@ -207,13 +205,10 @@ def run(
     out_path = RESULTS_DIR / "vrp_benchmark.csv"
     fieldnames = [
         "n_customers", "solver", "mean_time_s", "mean_cost",
-        "gap_vs_milp_exact_pct", "gap_vs_ortools_pct", "gap_vs_greedy_pct",
-        "success_rate", "gap_reference", "milp_opt_gap_pct", "milp_optimal_rate",
+        "gap_vs_ref_pct", "gap_reference", "success_rate",
+        "milp_opt_gap_pct", "milp_optimal_rate",
     ]
-    with out_path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_csv(out_path, fieldnames, rows)
     print(f"\nResults written to {out_path}")
 
 
@@ -221,13 +216,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--counts", nargs="+", type=int, default=[10, 20, 50, 100, 250, 500])
     parser.add_argument("--milp", action="store_true")
-    parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--n-eval", type=int, default=N_EVAL)
     parser.add_argument("--ortools-time", type=int, default=30, help="OR-Tools time limit (s)")
     parser.add_argument("--milp-time", type=int, default=300, help="MILP per-instance time limit (s)")
     parser.add_argument("--milp-budget", type=int, default=3600, help="Total MILP wall-time budget (s); stops at the n that would exceed it")
-    parser.add_argument("--nim", action="store_true", help="Use NVIDIA NIM cloud API instead of self-hosted (set NVIDIA_API_KEY)")
-    parser.add_argument("--cuopt-time", type=int, default=10, help="cuOpt time limit (s)")
+    add_cuopt_args(parser)
+    parser.set_defaults(cuopt_time=10)  # override default from add_cuopt_args (30 → 10 for synthetic)
     args = parser.parse_args()
     run(
         args.counts,

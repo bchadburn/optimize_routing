@@ -12,10 +12,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import csv
 import time
 from pathlib import Path
 
+from vrp_benchmark._bench_util import add_cuopt_args, init_cuopt_solver, write_csv
 from vrp_benchmark.data_tw import VRPTWInstance, route_cost_tw
 from vrp_benchmark.datasets.solomon import (
     DEFAULT_INSTANCES,
@@ -23,13 +23,15 @@ from vrp_benchmark.datasets.solomon import (
     SolomonBenchmarkInstance,
     load,
 )
+from vrp_benchmark.solvers.cuopt_tw import CuOptVRPTWSolver
 from vrp_benchmark.solvers.greedy_tw import GreedyVRPTWSolver
 from vrp_benchmark.solvers.ortools_tw import ORToolsVRPTWSolver
+from vrp_benchmark.solvers.protocol import VRPTWSolver
 
 RESULTS_DIR = Path("results")
 
 
-def _solve(solver, inst: VRPTWInstance) -> tuple[float, int, bool, float]:
+def _solve(solver: VRPTWSolver, inst: VRPTWInstance) -> tuple[float, int, bool, float]:
     """Return (distance, n_vehicles_used, feasible, elapsed_s)."""
     t0 = time.perf_counter()
     routes, cost = solver.solve(inst)
@@ -49,19 +51,14 @@ def run(
     ortools_time_s: int = 30,
     cuopt_time_s: int = 30,
 ) -> None:
-    solvers: dict[str, object] = {
+    solvers: dict[str, VRPTWSolver] = {
         "greedy": GreedyVRPTWSolver(),
         "ortools": ORToolsVRPTWSolver(time_limit_s=ortools_time_s),
     }
+    cuopt = init_cuopt_solver(include_cuopt, nim_mode, cuopt_time_s, CuOptVRPTWSolver)
+    if cuopt:
+        solvers["cuopt"] = cuopt
 
-    if include_cuopt:
-        try:
-            from vrp_benchmark.solvers.cuopt_tw import CuOptVRPTWSolver
-            solvers["cuopt"] = CuOptVRPTWSolver(time_limit_s=cuopt_time_s, mode="nim" if nim_mode else "self-hosted")
-        except Exception as e:
-            print(f"WARNING: cuOpt unavailable: {e}")
-
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
 
     for name in instance_names:
@@ -112,10 +109,7 @@ def run(
         "instance", "family", "n_customers", "bks_distance", "bks_vehicles",
         "solver", "distance", "n_vehicles_used", "gap_vs_bks_pct", "time_s", "feasible",
     ]
-    with out_path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_csv(out_path, fieldnames, rows)
     print(f"\nResults written to {out_path}")
 
 
@@ -124,10 +118,8 @@ if __name__ == "__main__":
     parser.add_argument("--instances", nargs="+", default=None)
     parser.add_argument("--family", nargs="+", default=None,
                         help="Run all instances in a family (e.g. C1 R1 RC2)")
-    parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--ortools-time", type=int, default=30)
-    parser.add_argument("--nim", action="store_true", help="Use NVIDIA NIM cloud API instead of self-hosted (set NVIDIA_API_KEY)")
-    parser.add_argument("--cuopt-time", type=int, default=30)
+    add_cuopt_args(parser)
     args = parser.parse_args()
 
     if args.instances:

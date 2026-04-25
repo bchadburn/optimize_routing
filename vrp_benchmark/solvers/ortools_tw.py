@@ -18,6 +18,7 @@ from __future__ import annotations
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
 from vrp_benchmark.data_tw import VRPTWInstance, route_cost_tw
+from vrp_benchmark.solvers._ortools_util import extract_routes
 
 TSCALE = 10  # Solomon times are small integers; ×10 gives enough precision
 
@@ -110,18 +111,6 @@ class ORToolsVRPTWSolver:
         if not solution:
             return [], 1e9
 
-        routes: list[list[int]] = []
-        for v in range(instance.n_vehicles):
-            index = routing.Start(v)
-            route: list[int] = []
-            while not routing.IsEnd(index):
-                node = manager.IndexToNode(index)
-                if node != 0:
-                    route.append(node)
-                index = solution.Value(routing.NextVar(index))
-            if route:
-                routes.append(route)
-
+        routes = extract_routes(routing, manager, solution, instance.n_vehicles)
         result = route_cost_tw(instance, routes)
-        cost = result.distance if result.feasible else 1e9
-        return routes, cost
+        return routes, result.distance if result.feasible else 1e9

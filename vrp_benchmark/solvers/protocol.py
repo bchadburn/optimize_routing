@@ -1,21 +1,19 @@
-"""Shared solver protocol for CVRP benchmark."""
+"""Solver protocols for CVRP and VRPTW benchmarks."""
 from __future__ import annotations
 
 from typing import Protocol
 
 from vrp_benchmark.data import CVRPInstance
+from vrp_benchmark.data_tw import VRPTWInstance
 
 
 class CVRPSolver(Protocol):
-    def solve(self, instance: CVRPInstance) -> tuple[list[list[int]], float]:
-        """Solve a CVRP instance.
+    """Protocol for CVRP solvers. Returns (routes, cost); ([], 1e9) on failure."""
 
-        Args:
-            instance: The CVRP instance to solve.
+    def solve(self, instance: CVRPInstance) -> tuple[list[list[int]], float]: ...
 
-        Returns:
-            (routes, cost) where routes is a list of routes (each route is a list
-            of customer node indices 1..n), and cost is the total distance.
-            Returns ([], 1e9) on failure.
-        """
-        ...
+
+class VRPTWSolver(Protocol):
+    """Protocol for VRPTW solvers. Returns (routes, distance); ([], 1e9) on failure."""
+
+    def solve(self, instance: VRPTWInstance) -> tuple[list[list[int]], float]: ...

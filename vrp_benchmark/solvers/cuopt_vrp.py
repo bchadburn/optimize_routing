@@ -10,14 +10,11 @@ Two modes:
 """
 from __future__ import annotations
 
-import os
-
 from vrp_benchmark.data import CVRPInstance, route_cost
+from vrp_benchmark.solvers._cuopt_base import CuOptClientMixin
 
-_NIM_ENDPOINT = "https://integrate.api.nvidia.com/v1/cuopt"
 
-
-class CuOptSolver:
+class CuOptSolver(CuOptClientMixin):
     """CVRP solver using NVIDIA cuOpt (self-hosted or NIM cloud API)."""
 
     def __init__(
@@ -28,36 +25,11 @@ class CuOptSolver:
         time_limit_s: int = 120,
         api_key: str | None = None,
     ) -> None:
-        self._time_limit_s = time_limit_s
-        self._mode = mode
-        if mode == "nim":
-            self._api_key = api_key or os.environ.get("NVIDIA_API_KEY", "")
-            if not self._api_key:
-                raise ValueError("NIM mode requires NVIDIA_API_KEY env var or api_key argument")
-            self._client = None
-        else:
-            from cuopt_sh_client import CuOptServiceSelfHostClient
-            self._client = CuOptServiceSelfHostClient(ip=host, port=port, polling_timeout=None)
-
-    def _request_nim(self, problem_data: dict) -> dict:
-        import json
-        import urllib.request
-        body = json.dumps({"action": "cuOpt_OptimizedRouting", "data": problem_data}).encode()
-        req = urllib.request.Request(
-            _NIM_ENDPOINT,
-            data=body,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
-        )
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read())
+        self._init_client(mode, host, port, time_limit_s, api_key)
 
     def solve(self, instance: CVRPInstance) -> tuple[list[list[int]], float]:
         n = instance.n_customers
-        dist = instance.dist_matrix.tolist()  # (n+1) × (n+1), depot at index 0
+        dist = instance.dist_matrix.tolist()
 
         problem_data: dict = {
             "cost_matrix_data": {"data": {"0": dist}},
@@ -72,27 +44,9 @@ class CuOptSolver:
             "solver_config": {"time_limit": self._time_limit_s},
         }
 
-        try:
-            if self._mode == "nim":
-                response = self._request_nim(problem_data)
-                solver_resp = response.get("response", {}).get("solver_response", response)
-            else:
-                response = self._client.get_optimized_routes(problem_data)
-                solver_resp = response["response"]["solver_response"]
-
-            if solver_resp.get("status", -1) != 0:
-                return [], 1e9
-
-            routes: list[list[int]] = []
-            vehicle_data = solver_resp.get("vehicle_data", {})
-            for _vid, vdata in vehicle_data.items():
-                # route includes depot (0) at start/end — strip them
-                raw = vdata.get("route", [])
-                route = [node for node in raw if node != 0]
-                if route:
-                    routes.append(route)
-
-            cost = route_cost(instance, routes)
-            return routes, cost
-        except Exception:
+        solver_resp = self._send(problem_data)
+        if solver_resp is None:
             return [], 1e9
+
+        routes = self._extract_routes(solver_resp)
+        return routes, route_cost(instance, routes)

@@ -11,21 +11,23 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import csv
 import time
 from pathlib import Path
 
+from vrp_benchmark._bench_util import add_cuopt_args, init_cuopt_solver, write_csv
 from vrp_benchmark.datasets.uchoa import DEFAULT_INSTANCES, BenchmarkInstance, load
+from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
 from vrp_benchmark.solvers.greedy import GreedySolver
 from vrp_benchmark.solvers.ortools_vrp import ORToolsSolver
+from vrp_benchmark.solvers.protocol import CVRPSolver
 
 RESULTS_DIR = Path("results")
 
 
-def _solve(solver, inst: BenchmarkInstance) -> tuple[float, float]:
+def _solve(solver: CVRPSolver, bench: BenchmarkInstance) -> tuple[float, float]:
     """Return (cost, elapsed_s)."""
     t0 = time.perf_counter()
-    _, cost = solver.solve(inst.instance)
+    _, cost = solver.solve(bench.instance)
     return cost, time.perf_counter() - t0
 
 
@@ -36,19 +38,14 @@ def run(
     ortools_time_s: int = 30,
     cuopt_time_s: int = 30,
 ) -> None:
-    solvers: dict[str, object] = {
+    solvers: dict[str, CVRPSolver] = {
         "greedy": GreedySolver(),
         "ortools": ORToolsSolver(time_limit_s=ortools_time_s),
     }
+    cuopt = init_cuopt_solver(include_cuopt, nim_mode, cuopt_time_s, CuOptSolver)
+    if cuopt:
+        solvers["cuopt"] = cuopt
 
-    if include_cuopt:
-        try:
-            from vrp_benchmark.solvers.cuopt_vrp import CuOptSolver
-            solvers["cuopt"] = CuOptSolver(time_limit_s=cuopt_time_s, mode="nim" if nim_mode else "self-hosted")
-        except Exception as e:
-            print(f"WARNING: cuOpt unavailable: {e}")
-
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     rows: list[dict] = []
 
     for name in instance_names:
@@ -59,8 +56,8 @@ def run(
 
         for solver_name, solver in solvers.items():
             cost, elapsed = _solve(solver, bench)
-            gap = (cost - bench.bks) / bench.bks * 100 if cost < 1e8 else float("nan")
             success = cost < 1e8
+            gap = (cost - bench.bks) / bench.bks * 100 if success else float("nan")
 
             cost_str = f"{cost:,.0f}" if success else "FAIL"
             gap_str = f"{gap:+.1f}%" if success else "  -"
@@ -79,20 +76,15 @@ def run(
 
     out_path = RESULTS_DIR / "real_benchmark.csv"
     fieldnames = ["instance", "n_customers", "bks", "solver", "cost", "gap_vs_bks_pct", "time_s", "success"]
-    with out_path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
+    write_csv(out_path, fieldnames, rows)
     print(f"\nResults written to {out_path}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--instances", nargs="+", default=DEFAULT_INSTANCES)
-    parser.add_argument("--cuopt", action="store_true")
     parser.add_argument("--ortools-time", type=int, default=30)
-    parser.add_argument("--nim", action="store_true", help="Use NVIDIA NIM cloud API instead of self-hosted (set NVIDIA_API_KEY)")
-    parser.add_argument("--cuopt-time", type=int, default=30)
+    add_cuopt_args(parser)
     args = parser.parse_args()
     run(args.instances, include_cuopt=args.cuopt, nim_mode=args.nim,
         ortools_time_s=args.ortools_time, cuopt_time_s=args.cuopt_time)

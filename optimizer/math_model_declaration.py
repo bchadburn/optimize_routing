@@ -101,13 +101,39 @@ def _add_base_model_parameters(
     )    
     
 
+    # When a customer has a `daily_demand` vector set (e.g. 95th-percentile
+    # output of the Bayesian forecast for the chance-constrained track, or a
+    # single scenario realization for CVaR), use those values verbatim. Falls
+    # back to per-call Normal(mean, std) sampling otherwise — preserves the
+    # existing daily-myopic behaviour. A negative explicit value is a caller
+    # bug (real demand isn't negative) so we raise rather than silently clamp;
+    # the Normal-sampling branch still clamps because the truncation is the
+    # documented fallback semantics.
+    def _resolve_demand(time_idx: int, cust_idx: int) -> float:
+        cust = supply_chain_data.customers[cust_idx]
+        explicit = getattr(cust, "daily_demand", None)
+        if explicit is not None:
+            if time_idx >= len(explicit):
+                raise ValueError(
+                    f"customer {cust_idx} daily_demand has length {len(explicit)}, "
+                    f"shorter than time_idx {time_idx}"
+                )
+            value = float(explicit[time_idx])
+            if value < 0.0:
+                raise ValueError(
+                    f"customer {cust_idx} daily_demand[{time_idx}] is negative "
+                    f"({value}) - explicit demand must be non-negative"
+                )
+            return value
+        return max(0.0, np.random.normal(cust.mean_demand, cust.std_dev_demand))
+
     model.p_customer_demand = IndexedORParam(
         model.s_time_indices,
         model.s_customers,
         name="s_mean_demand",
-        doc="Avg daily demand from customers",
+        doc="Daily demand per customer; explicit if Customer.daily_demand is set, else N(mean,std) sample",
         initialize={
-            (time_idx, cust_idx): max(0, np.random.normal(supply_chain_data.customers[cust_idx].mean_demand, supply_chain_data.customers[cust_idx].std_dev_demand)) 
+            (time_idx, cust_idx): _resolve_demand(time_idx, cust_idx)
             for time_idx in model.s_time_indices()
             for cust_idx in model.s_customers()
         },

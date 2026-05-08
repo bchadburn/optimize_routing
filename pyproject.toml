@@ -21,6 +21,17 @@ dqn = ["torch>=2.0"]
 # cuopt-sh-client connects to a running cuOpt Docker container via REST.
 # Install: uv pip install --extra-index-url https://pypi.nvidia.com cuopt-sh-client
 cuopt = ["cuopt-sh-client>=26.4"]
+# Bayesian forecasting (Experiment 1 robust optimization track, #13).
+# PyMC requires a C compiler; pip install works on Linux but conda is the
+# documented path for Windows/macOS. PyTensor + NUTS pulls ~500MB.
+# Install: uv pip install -e ".[bayesian]"
+bayesian = [
+    "pymc>=5.0",
+    "arviz>=0.17",
+    "xarray>=2024.1",
+    "netCDF4>=1.6",
+    "scipy>=1.11",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -36,3 +47,8 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that run NUTS sampling (skip with `pytest -m 'not slow'`)",
+]

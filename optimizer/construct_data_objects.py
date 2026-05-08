@@ -43,11 +43,25 @@ class Customer:
         customer_id(int): Unique identifier for the customer.
         mean_demand (float): Mean demand from the customer.
         std_dev_demand (float): Standard deviation of demand.
+        daily_demand (list[float] | None): Optional explicit per-day demand vector
+            (length must equal ``num_days`` of the simulation). When set, the
+            optimizer uses these values directly instead of resampling
+            ``Normal(mean_demand, std_dev_demand)`` per day. Used by the
+            Bayesian-forecast pipeline (#13) to feed the chance-constrained
+            MILP a 95th-percentile demand series, and by the CVaR scenario-MILP
+            to feed each scenario's realized demand.
     """
-    def __init__(self, customer_id: int, mean_demand: Number, std_dev_demand: Number):
+    def __init__(
+        self,
+        customer_id: int,
+        mean_demand: Number,
+        std_dev_demand: Number,
+        daily_demand: list[float] | None = None,
+    ):
         self.customer_id = customer_id
         self.mean_demand = mean_demand
         self.std_dev_demand = std_dev_demand
+        self.daily_demand = daily_demand
 
 class SupplyChainData:
     """
@@ -68,8 +82,45 @@ class SupplyChainData:
     def add_distribution_site(self, site_id: int, opening_cost: Number):
         self.distribution_sites[site_id] = DistributionSite(site_id, opening_cost)
 
-    def add_customer(self, customer_id: int, mean_demand: Number, std_dev_demand: Number):
-        self.customers[customer_id] = Customer(customer_id, mean_demand, std_dev_demand)
+    def add_customer(
+        self,
+        customer_id: int,
+        mean_demand: Number,
+        std_dev_demand: Number,
+        daily_demand: list[float] | None = None,
+    ):
+        self.customers[customer_id] = Customer(
+            customer_id, mean_demand, std_dev_demand, daily_demand=daily_demand,
+        )
+
+    def clone(self) -> "SupplyChainData":
+        """Deep-copy this SupplyChainData. Used by stochastic optimization
+        wrappers that want to inject per-customer ``daily_demand`` without
+        mutating the original (other solvers may run against the same instance).
+
+        Centralizing the clone here — vs. reaching into private dicts at the
+        call site — keeps the copy logic correct as new fields get added to
+        SupplyChainData / its child classes.
+        """
+        new = SupplyChainData()
+        for site_id, site in self.manufacturing_sites.items():
+            new.add_manufacturing_site(site_id, site.capacity)
+            for d, cost in site.transport_cost_m_to_d.items():
+                new.manufacturing_sites[site_id].set_mf_to_dist_transport_costs(d, cost)
+        for site_id, site in self.distribution_sites.items():
+            new.add_distribution_site(site_id, site.opening_cost)
+            for c, cost in site.transport_cost_d_to_c.items():
+                new.distribution_sites[site_id].set_dist_to_cust_transport_costs(c, cost)
+        for cust_id, cust in self.customers.items():
+            new.add_customer(
+                customer_id=cust_id,
+                mean_demand=cust.mean_demand,
+                std_dev_demand=cust.std_dev_demand,
+                daily_demand=(
+                    list(cust.daily_demand) if cust.daily_demand is not None else None
+                ),
+            )
+        return new
 
 
 class SimulationParameters:

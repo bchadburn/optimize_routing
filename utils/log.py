@@ -64,7 +64,7 @@ def patching(record):
 
 def get_logger(
     log_process: str = None, log_path: str | None = sys.stderr
-) -> loguru.Logger:
+) -> "loguru.Logger":
     """
     Creates a log file and returns a Logger object.
 
